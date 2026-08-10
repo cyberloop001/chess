@@ -56,7 +56,7 @@ cd frontend
 npm run dev
 ```
 
-Open http://127.0.0.1:5173 and click **Start duel**.
+Open http://127.0.0.1:8080 and click **Start duel**.
 
 ## Notes
 
