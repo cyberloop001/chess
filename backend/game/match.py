@@ -334,13 +334,13 @@ class MatchEngine:
         outcome: dict[str, Any],
         series: SeriesConfig,
     ) -> dict[str, Any]:
+        # Train each architecture on all plies (full game), AlphaZero-style
         steps: list[dict[str, Any]] = outcome.get("train_steps") or []
         reports = []
         for model_id in (MLP_ID, TRANSFORMER_ID):
-            samples = [s for s in steps if s["model"] == model_id]
             report = train_from_samples(
                 nets[model_id],
-                samples,
+                steps,
                 model_name=model_id,
                 epochs=series.train_epochs,
                 batch_size=series.train_batch_size,
