@@ -193,19 +193,13 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         };
         pendingResultRef.current = end;
         setFinalResult(end);
-        setStatus(formatResult(end));
+        setStatus("Game finished");
         persistMatch(end);
         break;
       }
       case "training_complete": {
         setTrainReports(event.models);
-        const summary = event.models
-          .map((m) => `${modelLabel(m.model)} loss ${m.total_loss}`)
-          .join(" · ");
-        const base = pendingResultRef.current
-          ? formatResult(pendingResultRef.current)
-          : "Game finished";
-        setStatus(`${base} · trained (${summary})`);
+        setStatus("Game finished · models trained");
         break;
       }
       case "series_end": {
@@ -219,7 +213,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           black: event.black || matchMetaRef.current.black,
         };
         setFinalResult(end);
-        setStatus(formatResult(end));
+        setStatus("Game finished");
         break;
       }
       case "match_cancelled":
@@ -307,12 +301,13 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         </div>
         <div className="status-pill">
           <span className={`dot ${running ? "" : "idle"}`} />
-          {status}
+          <span className="status-text">{status}</span>
         </div>
         {finalResult && (
           <div className={`result-banner result-${resultKind}`}>
             <span className="result-label">Final result</span>
             <strong>{formatResult(finalResult)}</strong>
+            <span className="result-score">{finalResult.result}</span>
           </div>
         )}
         {trainReports.length > 0 && (
@@ -341,11 +336,6 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           </div>
         </div>
         <ChessBoard fen={fen} lastUci={lastUci} />
-        {finalResult && (
-          <div className={`result-banner result-banner-board result-${resultKind}`}>
-            <strong>{formatResult(finalResult)}</strong>
-          </div>
-        )}
       </section>
 
       <section className="panel">
