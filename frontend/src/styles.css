@@ -190,9 +190,16 @@ button {
   margin-bottom: 0.35rem;
 }
 
-.train-box ul {
-  margin: 0;
-  padding-left: 1.1rem;
+.train-box-live {
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.train-box-live p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .result-banner {

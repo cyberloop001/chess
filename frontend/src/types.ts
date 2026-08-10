@@ -72,6 +72,10 @@ export type MatchEvent =
   | MoveEvent
   | MatchEndEvent
   | {
+      type: "training_start";
+      game: number;
+    }
+  | {
       type: "training_complete";
       game: number;
       models: TrainModelReport[];
