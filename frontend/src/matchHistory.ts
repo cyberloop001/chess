@@ -123,7 +123,7 @@ export function computeAnalytics(matches: StoredMatch[]): AnalyticsSummary {
       if (side === "transformer") transformer.games += 1;
     }
 
-    if (match.result === "1/2-1/2" || winner === "other") {
+    if (match.result === "1/2-1/2") {
       if (white === "mlp" || black === "mlp") mlp.draws += 1;
       if (white === "transformer" || black === "transformer") transformer.draws += 1;
       if (
@@ -134,12 +134,26 @@ export function computeAnalytics(matches: StoredMatch[]): AnalyticsSummary {
       }
     } else if (winner === "mlp") {
       mlp.wins += 1;
-      transformer.losses += 1;
-      headToHead.mlpWins += 1;
+      if (black === "transformer" || white === "transformer") transformer.losses += 1;
+      if (
+        (white === "mlp" && black === "transformer") ||
+        (white === "transformer" && black === "mlp")
+      ) {
+        headToHead.mlpWins += 1;
+      }
     } else if (winner === "transformer") {
       transformer.wins += 1;
-      mlp.losses += 1;
-      headToHead.transformerWins += 1;
+      if (black === "mlp" || white === "mlp") mlp.losses += 1;
+      if (
+        (white === "mlp" && black === "transformer") ||
+        (white === "transformer" && black === "mlp")
+      ) {
+        headToHead.transformerWins += 1;
+      }
+    } else {
+      // Human (or other) won — count a loss for the model that played
+      if (white === "mlp" || black === "mlp") mlp.losses += 1;
+      if (white === "transformer" || black === "transformer") transformer.losses += 1;
     }
 
     for (const move of match.moves) {

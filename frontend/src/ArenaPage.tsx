@@ -227,19 +227,20 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         setTraining(true);
         setStatus(
           total > 1
-            ? `Training after game ${event.game} of ${total}…`
+            ? `Training after game ${event.game ?? seriesGame} of ${total}…`
             : "Training models… please wait",
         );
         break;
       }
       case "training_complete": {
         const total = event.train_count ?? seriesTotalRef.current;
+        const gameNum = event.game ?? 0;
         setTrainReports(event.models);
         setTraining(false);
         setStatus(
           total > 1
-            ? `Trained ${event.game} of ${total}` +
-              (event.game < total ? " · starting next duel…" : " · series complete")
+            ? `Trained ${gameNum} of ${total}` +
+              (gameNum < total ? " · starting next duel…" : " · series complete")
             : "Game finished · models trained",
         );
         break;

@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { ArenaPage } from "./ArenaPage";
+import { HumanPage } from "./HumanPage";
 import { fetchMatchHistory } from "./matchHistory";
 import type { StoredMatch } from "./types";
 
-type Page = "arena" | "analytics";
+type Page = "arena" | "human" | "analytics";
 
 export default function App() {
   const [page, setPage] = useState<Page>("arena");
   const [matches, setMatches] = useState<StoredMatch[]>([]);
   const [duelLive, setDuelLive] = useState(false);
+  const [humanLive, setHumanLive] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
   const refreshHistory = useCallback(async () => {
@@ -26,6 +28,13 @@ export default function App() {
     void refreshHistory();
   }, [refreshHistory]);
 
+  const tagline =
+    page === "arena"
+      ? "Watch MLP+MCTS and Transformer+MCTS duel under a shared AlphaZero-style search."
+      : page === "human"
+        ? "Play against a model. After the game, it trains from the result."
+        : "Compare model outcomes, search confidence, and value trajectories across duels.";
+
   return (
     <div className="app">
       <header className="hero">
@@ -39,6 +48,12 @@ export default function App() {
               Arena{duelLive ? " · live" : ""}
             </button>
             <button
+              className={`nav-link ${page === "human" ? "active" : ""}`}
+              onClick={() => setPage("human")}
+            >
+              Human{humanLive ? " · live" : ""}
+            </button>
+            <button
               className={`nav-link ${page === "analytics" ? "active" : ""}`}
               onClick={() => {
                 void refreshHistory();
@@ -49,11 +64,7 @@ export default function App() {
             </button>
           </nav>
         </div>
-        <p className="tagline">
-          {page === "arena"
-            ? "Watch MLP+MCTS and Transformer+MCTS duel under a shared AlphaZero-style search."
-            : "Compare model outcomes, search confidence, and value trajectories across duels."}
-        </p>
+        <p className="tagline">{tagline}</p>
         {historyError && page === "analytics" && (
           <p className="tagline">{historyError}</p>
         )}
@@ -61,6 +72,9 @@ export default function App() {
 
       <div className={page === "arena" ? "" : "page-hidden"} aria-hidden={page !== "arena"}>
         <ArenaPage onHistoryChange={() => void refreshHistory()} onRunningChange={setDuelLive} />
+      </div>
+      <div className={page === "human" ? "" : "page-hidden"} aria-hidden={page !== "human"}>
+        <HumanPage onHistoryChange={() => void refreshHistory()} onRunningChange={setHumanLive} />
       </div>
       <div
         className={page === "analytics" ? "" : "page-hidden"}
