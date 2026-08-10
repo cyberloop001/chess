@@ -93,10 +93,17 @@ class MCTS:
         for action, child in root.children.items():
             visit_counts[action] = child.visit_count
 
+        # Discourage immediate cycles so games are more likely to finish decisively
+        visit_counts = self._penalize_repetitions(board, root, visit_counts)
+
         move, action = self._select_action(board, root, visit_counts)
         policy = visit_counts / max(visit_counts.sum(), 1.0)
 
-        ranked = sorted(root.children.items(), key=lambda kv: kv[1].visit_count, reverse=True)[:5]
+        ranked = sorted(
+            ((a, c) for a, c in root.children.items() if visit_counts[a] > 0),
+            key=lambda kv: visit_counts[kv[0]],
+            reverse=True,
+        )[:5]
         top_moves = []
         for act, child in ranked:
             assert child.move is not None
@@ -115,6 +122,34 @@ class MCTS:
             top_moves=top_moves,
         )
         return move, policy, stats
+
+    def _penalize_repetitions(
+        self, board: chess.Board, root: Node, visit_counts: np.ndarray
+    ) -> np.ndarray:
+        """Zero out looping moves when any non-repeating alternative exists."""
+        adjusted = visit_counts.copy()
+        repeating: list[int] = []
+        non_repeating: list[int] = []
+        for action, child in root.children.items():
+            if child.move is None or child.visit_count <= 0:
+                continue
+            board.push(child.move)
+            # Position already seen before this occurrence → we're cycling
+            is_cycle = board.is_repetition(2) or board.is_fivefold_repetition()
+            board.pop()
+            if is_cycle:
+                repeating.append(action)
+            else:
+                non_repeating.append(action)
+
+        if non_repeating and repeating:
+            for action in repeating:
+                adjusted[action] = 0.0
+            # Ensure we still have mass
+            if adjusted.sum() <= 0:
+                for action in non_repeating:
+                    adjusted[action] = float(root.children[action].visit_count)
+        return adjusted
 
     def _expand(self, node: Node, board: chess.Board) -> float:
         planes = board_to_tensor(board)
@@ -154,18 +189,32 @@ class MCTS:
         # From side-to-move perspective: if checkmate, side to move lost
         if board.is_checkmate():
             return -1.0
+        # Soft penalty for drawish terminals so search prefers decisive lines
+        if board.is_fivefold_repetition() or board.is_insufficient_material():
+            return 0.0
+        if board.can_claim_threefold_repetition() or board.can_claim_fifty_moves():
+            return -0.05
         return 0.0
 
     def _select_action(
         self, board: chess.Board, root: Node, visit_counts: np.ndarray
     ) -> tuple[chess.Move, int]:
+        # Fall back if penalties wiped everything
+        if visit_counts.sum() <= 0:
+            for action, child in root.children.items():
+                visit_counts[action] = max(child.visit_count, 1)
+
         temp = self.config.temperature
         if temp <= 1e-6:
             action = int(np.argmax(visit_counts))
         else:
             probs = visit_counts ** (1.0 / temp)
-            probs = probs / probs.sum()
-            action = int(np.random.choice(len(probs), p=probs))
+            total = probs.sum()
+            if total <= 0:
+                action = int(np.argmax(visit_counts))
+            else:
+                probs = probs / total
+                action = int(np.random.choice(len(probs), p=probs))
         move = root.children[action].move
         assert move is not None
         return move, action

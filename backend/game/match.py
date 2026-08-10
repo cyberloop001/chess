@@ -27,7 +27,7 @@ TRANSFORMER_ID = "transformer"
 
 @dataclass
 class SeriesConfig:
-    simulations: int = 64
+    simulations: int = 96
     move_delay_ms: int = 400
     max_games: int = 1
     train_epochs: int = 2
@@ -206,11 +206,11 @@ class MatchEngine:
         game_index: int,
     ) -> dict[str, Any]:
         mcts_cfg = MCTSConfig(
-            simulations=series.simulations,
+            simulations=max(series.simulations, 96),
             c_puct=self.config.mcts.c_puct,
             dirichlet_alpha=self.config.mcts.dirichlet_alpha,
-            dirichlet_epsilon=0.15,
-            temperature=0.0,
+            dirichlet_epsilon=0.25,
+            temperature=0.4,  # variety early; still mostly follow visits
         )
         agents = {
             chess.WHITE: (white_name, MCTS(nets[white_name], mcts_cfg)),
