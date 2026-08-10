@@ -32,6 +32,9 @@ export type MatchEndEvent = {
   white?: string;
   black?: string;
   game_index?: number;
+  mode?: string;
+  model?: string;
+  human_color?: string;
 };
 
 export type TrainModelReport = {
@@ -61,6 +64,16 @@ export type MatchEvent =
       black: string;
       simulations: number;
       game_index?: number;
+      mode?: string;
+      human_color?: "white" | "black";
+      model?: string;
+    }
+  | {
+      type: "your_turn";
+      side: "white" | "black";
+      fen: string;
+      ply: number;
+      legal_moves: string[];
     }
   | {
       type: "thinking";
@@ -74,13 +87,15 @@ export type MatchEvent =
   | MatchEndEvent
   | {
       type: "training_start";
-      game: number;
+      game?: number;
       train_count?: number;
+      model?: string;
     }
   | {
       type: "training_complete";
-      game: number;
+      game?: number;
       train_count?: number;
+      model?: string;
       models: TrainModelReport[];
     }
   | {
@@ -92,7 +107,12 @@ export type MatchEvent =
       termination?: string;
       white?: string;
       black?: string;
-      games: Array<{ result: string; winner: string; white: string; black: string }>;
+      games?: Array<{ result: string; winner: string; white: string; black: string }>;
+      winner?: string;
+      fen?: string;
+      mode?: string;
+      model?: string;
+      human_color?: string;
     }
   | { type: "analytics_saved"; match_id: string }
   | { type: "match_cancelled"; fen: string }
@@ -124,6 +144,7 @@ export type StoredMatch = {
 export function modelLabel(id: string): string {
   if (id === "mlp") return "MLP + MCTS";
   if (id === "transformer") return "Transformer + MCTS";
+  if (id === "human") return "Human";
   if (id === "none") return "None";
   return id;
 }
@@ -131,5 +152,6 @@ export function modelLabel(id: string): string {
 export function shortModel(id: string): string {
   if (id === "mlp") return "MLP";
   if (id === "transformer") return "Transformer";
+  if (id === "human") return "Human";
   return id;
 }
