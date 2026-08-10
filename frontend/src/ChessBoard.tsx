@@ -48,7 +48,11 @@ export function ChessBoard({ fen, lastUci }: Props) {
             <div key={sq} className={classes}>
               {rankIdx === 7 && <span className="coord file">{file}</span>}
               {fileIdx === 0 && <span className="coord rank">{rank}</span>}
-              {pieceKey ? PIECES[pieceKey] : null}
+              {pieceKey ? (
+                <span className="piece" data-color={square?.color}>
+                  {PIECES[pieceKey]}
+                </span>
+              ) : null}
             </div>
           );
         }),
