@@ -68,7 +68,7 @@ def models() -> dict[str, Any]:
         ],
         "rules": {
             "pairing": "White = MLP, Black = Transformer",
-            "mode": "One game per Start · result is win/loss/draw · then both self-train",
+            "mode": "User sets train count N · duel → train · repeat N times",
         },
     }
 
@@ -135,11 +135,17 @@ async def match_socket(ws: WebSocket) -> None:
                 if _match_lock.locked():
                     await send({"type": "error", "message": "A match is already running"})
                     continue
+                try:
+                    train_count = int(payload.get("train_count") or payload.get("max_games") or 1)
+                except (TypeError, ValueError):
+                    train_count = 1
+                train_count = max(1, min(train_count, 100))
                 async with _match_lock:
                     await engine.play(
                         on_event=send,
                         white_model="mlp",
                         black_model="transformer",
+                        train_count=train_count,
                     )
             elif action == "cancel":
                 engine.cancel()

@@ -52,6 +52,7 @@ export type MatchEvent =
       simulations: number;
       play_until_win: boolean;
       max_games: number;
+      train_count?: number;
     }
   | {
       type: "match_start";
@@ -74,15 +75,18 @@ export type MatchEvent =
   | {
       type: "training_start";
       game: number;
+      train_count?: number;
     }
   | {
       type: "training_complete";
       game: number;
+      train_count?: number;
       models: TrainModelReport[];
     }
   | {
       type: "series_end";
       game_count: number;
+      train_count?: number;
       series_winner: string;
       result?: string;
       termination?: string;
