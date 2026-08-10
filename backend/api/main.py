@@ -43,7 +43,7 @@ def models() -> dict[str, Any]:
         ],
         "rules": {
             "pairing": "White = MLP, Black = Transformer",
-            "series": "Rematch on draws until one model wins, then both self-train on the game",
+            "mode": "One game per Start · result is win/loss/draw · then both self-train",
         },
     }
 
@@ -65,12 +65,10 @@ async def match_socket(ws: WebSocket) -> None:
                     await send({"type": "error", "message": "A match is already running"})
                     continue
                 async with _match_lock:
-                    await engine.play_series(
+                    await engine.play(
                         on_event=send,
                         white_model="mlp",
                         black_model="transformer",
-                        play_until_win=bool(payload.get("play_until_win", True)),
-                        max_games=int(payload.get("max_games", 32)),
                     )
             elif action == "cancel":
                 engine.cancel()

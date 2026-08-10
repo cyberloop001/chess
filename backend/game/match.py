@@ -20,7 +20,6 @@ EventCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
 
 WEIGHTS_DIR = Path(__file__).resolve().parents[2] / "weights"
 
-# Competition always uses these two architectures
 MLP_ID = "mlp"
 TRANSFORMER_ID = "transformer"
 
@@ -29,17 +28,16 @@ TRANSFORMER_ID = "transformer"
 class SeriesConfig:
     simulations: int = 64
     move_delay_ms: int = 400
-    max_games: int = 32
+    max_games: int = 1
     train_epochs: int = 2
     train_batch_size: int = 16
     train_lr: float = 1e-3
     swap_colors_each_game: bool = False
-    # Keep playing while result is draw; stop when one model wins
-    play_until_decisive: bool = True
+    play_until_decisive: bool = False
 
 
 class MatchEngine:
-    """Runs MLP vs Transformer with rematch-until-win and post-game training."""
+    """Runs one MLP vs Transformer game, then self-trains both nets."""
 
     def __init__(self, config: GameConfig | None = None, device: str | None = None):
         self.config = config or GameConfig()
@@ -59,7 +57,6 @@ class MatchEngine:
                 state = torch.load(weight_path, map_location=self.device, weights_only=True)
                 net.load_state_dict(state)
             except (RuntimeError, ValueError, TypeError) as exc:
-                # Incompatible checkpoint (e.g. different hidden sizes) — start fresh
                 print(f"Skipping incompatible weights at {weight_path}: {exc}")
                 try:
                     weight_path.unlink(missing_ok=True)
@@ -72,6 +69,23 @@ class MatchEngine:
     def cancel(self) -> None:
         self._cancelled = True
 
+    async def play(
+        self,
+        on_event: EventCallback | None = None,
+        white_model: str | None = None,
+        black_model: str | None = None,
+        simulations: int | None = None,
+    ) -> dict[str, Any]:
+        """Play a single game, show result, train, and stop."""
+        return await self.play_series(
+            on_event=on_event,
+            white_model=white_model,
+            black_model=black_model,
+            simulations=simulations,
+            play_until_win=False,
+            max_games=1,
+        )
+
     async def play_series(
         self,
         on_event: EventCallback | None = None,
@@ -79,25 +93,24 @@ class MatchEngine:
         white_model: str | None = None,
         black_model: str | None = None,
         simulations: int | None = None,
-        play_until_win: bool = True,
-        max_games: int = 32,
+        play_until_win: bool = False,
+        max_games: int = 1,
     ) -> dict[str, Any]:
-        """Play MLP vs Transformer; rematch on draws; train after each game."""
         self._cancelled = False
         series = SeriesConfig(
             simulations=self.config.mcts.simulations,
             move_delay_ms=self.config.move_delay_ms,
-            max_games=max_games,
+            max_games=max(1, max_games),
             play_until_decisive=play_until_win,
         )
         if simulations is not None:
             series.simulations = simulations
 
-        # Fix sides to the two competing models (ignore same-model selections)
         white_name, black_name = _resolve_sides(white_model, black_model)
-        mlp_net = self._load_network(MLP_ID)
-        transformer_net = self._load_network(TRANSFORMER_ID)
-        nets = {MLP_ID: mlp_net, TRANSFORMER_ID: transformer_net}
+        nets = {
+            MLP_ID: self._load_network(MLP_ID),
+            TRANSFORMER_ID: self._load_network(TRANSFORMER_ID),
+        }
 
         async def emit(event: dict[str, Any]) -> None:
             if on_event is None:
@@ -141,7 +154,6 @@ class MatchEngine:
 
             games.append(outcome)
 
-            # Self-train both models from this game's positions
             train_info = await asyncio.to_thread(
                 self._train_from_outcome,
                 nets,
@@ -153,14 +165,22 @@ class MatchEngine:
             winner = outcome.get("winner")
             if winner in (MLP_ID, TRANSFORMER_ID):
                 series_winner = winner
-                if series.play_until_decisive:
-                    break
-            # Draw → continue another game
 
+            # Default: one game only. Optional series mode stops on decisive result.
+            if not series.play_until_decisive:
+                break
+            if winner in (MLP_ID, TRANSFORMER_ID):
+                break
+
+        last = games[-1] if games else {}
         final = {
             "type": "series_end",
-            "games_count": len(games),
-            "series_winner": series_winner or "none",
+            "game_count": len(games),
+            "series_winner": series_winner or last.get("winner") or "none",
+            "result": last.get("result"),
+            "termination": last.get("termination"),
+            "white": last.get("white", white_name),
+            "black": last.get("black", black_name),
             "games": [
                 {
                     "result": g.get("result"),
@@ -173,23 +193,6 @@ class MatchEngine:
         }
         await emit(final)
         return final
-
-    async def play(
-        self,
-        on_event: EventCallback | None = None,
-        white_model: str | None = None,
-        black_model: str | None = None,
-        simulations: int | None = None,
-    ) -> dict[str, Any]:
-        """Backward-compatible single entry → series until one model wins."""
-        return await self.play_series(
-            on_event=on_event,
-            white_model=white_model,
-            black_model=black_model,
-            simulations=simulations,
-            play_until_win=True,
-            max_games=32,
-        )
 
     async def _play_one(
         self,
@@ -285,7 +288,6 @@ class MatchEngine:
                 await asyncio.sleep(series.move_delay_ms / 1000.0)
 
         result = board.result(claim_draw=True)
-        # Attach value targets from the side that moved
         z_white = {"1-0": 1.0, "0-1": -1.0}.get(result, 0.0)
         for step in train_steps:
             step["z"] = z_white if step["side"] == "white" else -z_white
@@ -332,7 +334,6 @@ class MatchEngine:
 
 
 def _resolve_sides(white_model: str | None, black_model: str | None) -> tuple[str, str]:
-    """Always White=MLP, Black=Transformer."""
     del white_model, black_model
     return MLP_ID, TRANSFORMER_ID
 

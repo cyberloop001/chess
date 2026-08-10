@@ -16,6 +16,27 @@ type Props = {
   onRunningChange?: (running: boolean) => void;
 };
 
+type FinalResult = {
+  result: string;
+  winner: string;
+  termination: string;
+  white: string;
+  black: string;
+};
+
+function formatResult(final: FinalResult): string {
+  if (final.winner === "draw" || final.result === "1/2-1/2") {
+    return `Draw (${final.result}) · ${final.termination}`;
+  }
+  if (final.winner === "mlp") {
+    return `MLP + MCTS wins · ${final.result} · ${final.termination}`;
+  }
+  if (final.winner === "transformer") {
+    return `Transformer + MCTS wins · ${final.result} · ${final.termination}`;
+  }
+  return `Result ${final.result} · ${final.termination}`;
+}
+
 export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [whiteModel, setWhiteModel] = useState<ModelId>("mlp");
   const [blackModel, setBlackModel] = useState<ModelId>("transformer");
@@ -26,10 +47,11 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [thinkingSide, setThinkingSide] = useState<"white" | "black" | null>(null);
   const [lastUci, setLastUci] = useState<string | null>(null);
   const [latestMcts, setLatestMcts] = useState<MoveEvent["mcts"] | null>(null);
-  const [gameIndex, setGameIndex] = useState(0);
   const [trainReports, setTrainReports] = useState<TrainModelReport[]>([]);
+  const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
   const matchMetaRef = useRef({ white: "mlp", black: "transformer", simulations: 64 });
   const movesRef = useRef<MoveEvent[]>([]);
+  const pendingResultRef = useRef<FinalResult | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const onRunningChangeRef = useRef(onRunningChange);
   onRunningChangeRef.current = onRunningChange;
@@ -50,16 +72,10 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     onRunningChangeRef.current?.(next);
   }
 
-  function persistMatch(end: {
-    result: string;
-    winner: string;
-    termination: string;
-    white?: string;
-    black?: string;
-  }) {
+  function persistMatch(end: FinalResult) {
     const stored = buildStoredMatch({
-      white: end.white || matchMetaRef.current.white,
-      black: end.black || matchMetaRef.current.black,
+      white: end.white,
+      black: end.black,
       simulations: matchMetaRef.current.simulations,
       result: end.result,
       winner: end.winner,
@@ -92,9 +108,9 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
       case "series_start":
         setRunningState(true);
         setTrainReports([]);
-        setStatus(
-          `Series started · play until one wins · ${modelLabel(event.white)} vs ${modelLabel(event.black)}`,
-        );
+        setFinalResult(null);
+        pendingResultRef.current = null;
+        setStatus(`${modelLabel(event.white)} vs ${modelLabel(event.black)}`);
         break;
       case "match_start":
         matchMetaRef.current = {
@@ -109,17 +125,14 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         setMoves([]);
         setLastUci(null);
         setLatestMcts(null);
-        setGameIndex(event.game_index ?? 1);
+        setFinalResult(null);
+        pendingResultRef.current = null;
         setRunningState(true);
-        setStatus(
-          `Game ${event.game_index ?? 1} · ${modelLabel(event.white)} (W) vs ${modelLabel(event.black)} (B)`,
-        );
+        setStatus(`${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`);
         break;
       case "thinking":
         setThinkingSide(event.side);
-        setStatus(
-          `Game ${(event.game_index ?? gameIndex) || 1} · ${modelLabel(event.model)} is searching…`,
-        );
+        setStatus(`${modelLabel(event.model)} is searching…`);
         break;
       case "move": {
         movesRef.current = [...movesRef.current, event];
@@ -128,48 +141,50 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         setLastUci(event.uci);
         setLatestMcts(event.mcts);
         setThinkingSide(null);
-        setStatus(
-          `Game ${(event.game_index ?? gameIndex) || 1} · ${modelLabel(event.model)} played ${event.san}`,
-        );
+        setStatus(`${modelLabel(event.model)} played ${event.san}`);
         break;
       }
-      case "match_end":
+      case "match_end": {
         setThinkingSide(null);
         setFen(event.fen);
-        if (event.winner === "draw") {
-          setStatus(`Game ${event.game_index ?? gameIndex} drawn (${event.result}) · rematching…`);
-        } else {
-          setStatus(
-            `Game ${event.game_index ?? gameIndex} · ${modelLabel(event.winner)} wins (${event.result})`,
-          );
-        }
-        persistMatch({
+        const end: FinalResult = {
           result: event.result,
           winner: event.winner,
           termination: event.termination,
-          white: event.white,
-          black: event.black,
-        });
+          white: event.white || matchMetaRef.current.white,
+          black: event.black || matchMetaRef.current.black,
+        };
+        pendingResultRef.current = end;
+        setFinalResult(end);
+        setStatus(formatResult(end));
+        persistMatch(end);
         break;
+      }
       case "training_complete": {
         setTrainReports(event.models);
         const summary = event.models
           .map((m) => `${modelLabel(m.model)} loss ${m.total_loss}`)
           .join(" · ");
-        setStatus(`Game ${event.game} trained · ${summary}`);
+        const base = pendingResultRef.current
+          ? formatResult(pendingResultRef.current)
+          : "Game finished";
+        setStatus(`${base} · trained (${summary})`);
         break;
       }
-      case "series_end":
+      case "series_end": {
         setRunningState(false);
         setThinkingSide(null);
-        if (event.series_winner === "none") {
-          setStatus(`Series over · ${event.game_count} games · no decisive winner`);
-        } else {
-          setStatus(
-            `Series over · ${modelLabel(event.series_winner)} wins after ${event.game_count} game(s)`,
-          );
-        }
+        const end: FinalResult = pendingResultRef.current ?? {
+          result: event.result || "unknown",
+          winner: event.series_winner,
+          termination: event.termination || "unknown",
+          white: event.white || matchMetaRef.current.white,
+          black: event.black || matchMetaRef.current.black,
+        };
+        setFinalResult(end);
+        setStatus(formatResult(end));
         break;
+      }
       case "match_cancelled":
         setRunningState(false);
         setThinkingSide(null);
@@ -191,15 +206,14 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     setLastUci(null);
     setLatestMcts(null);
     setTrainReports([]);
-    setGameIndex(0);
+    setFinalResult(null);
+    pendingResultRef.current = null;
     setStatus("Connecting…");
     const ws = ensureSocket();
     const payload = {
       action: "start",
       white_model: "mlp",
       black_model: "transformer",
-      play_until_win: true,
-      max_games: 8,
     };
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(payload));
@@ -219,13 +233,22 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     }
   }
 
+  const resultKind =
+    finalResult == null
+      ? null
+      : finalResult.winner === "draw" || finalResult.result === "1/2-1/2"
+        ? "draw"
+        : finalResult.winner === "mlp"
+          ? "mlp"
+          : "transformer";
+
   return (
     <main className="layout">
       <section className="panel">
         <h2>Match setup</h2>
         <p className="setup-note">
-          Fixed duel: White = MLP + MCTS, Black = Transformer + MCTS. Keeps playing until one model
-          wins, then both self-train.
+          Fixed duel: White = MLP + MCTS, Black = Transformer + MCTS. Plays one game, shows the
+          result (win / loss / draw), then both models self-train.
         </p>
         <div className="pairing">
           <div>
@@ -239,7 +262,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         </div>
         <div className="actions">
           <button className="btn btn-primary" disabled={running} onClick={startMatch}>
-            Start series
+            Start duel
           </button>
           <button className="btn btn-ghost" disabled={!running} onClick={cancelMatch}>
             Cancel
@@ -249,9 +272,15 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           <span className={`dot ${running ? "" : "idle"}`} />
           {status}
         </div>
+        {finalResult && (
+          <div className={`result-banner result-${resultKind}`}>
+            <span className="result-label">Final result</span>
+            <strong>{formatResult(finalResult)}</strong>
+          </div>
+        )}
         {trainReports.length > 0 && (
           <div className="train-box">
-            <strong>Last training</strong>
+            <strong>Training after game</strong>
             <ul>
               {trainReports.map((r) => (
                 <li key={r.model}>
@@ -266,15 +295,20 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
       <section className="board-wrap">
         <div className="players">
           <div className={`player ${thinkingSide === "white" ? "active" : ""}`}>
-            <span>White{gameIndex ? ` · G${gameIndex}` : ""}</span>
+            <span>White</span>
             <strong>{modelLabel(whiteModel)}</strong>
           </div>
           <div className={`player ${thinkingSide === "black" ? "active" : ""}`}>
-            <span>Black{gameIndex ? ` · G${gameIndex}` : ""}</span>
+            <span>Black</span>
             <strong>{modelLabel(blackModel)}</strong>
           </div>
         </div>
         <ChessBoard fen={fen} lastUci={lastUci} />
+        {finalResult && (
+          <div className={`result-banner result-banner-board result-${resultKind}`}>
+            <strong>{formatResult(finalResult)}</strong>
+          </div>
+        )}
       </section>
 
       <section className="panel">

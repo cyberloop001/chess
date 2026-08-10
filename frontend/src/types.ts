@@ -80,6 +80,10 @@ export type MatchEvent =
       type: "series_end";
       game_count: number;
       series_winner: string;
+      result?: string;
+      termination?: string;
+      white?: string;
+      black?: string;
       games: Array<{ result: string; winner: string; white: string; black: string }>;
     }
   | { type: "match_cancelled"; fen: string }
