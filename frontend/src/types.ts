@@ -16,7 +16,7 @@ export type MoveEvent = {
   san: string;
   fen: string;
   game_index?: number;
-  mcts: {
+  mcts?: {
     simulations: number;
     root_value: number;
     top_moves: MctsMove[];
@@ -86,6 +86,7 @@ export type MatchEvent =
       black?: string;
       games: Array<{ result: string; winner: string; white: string; black: string }>;
     }
+  | { type: "analytics_saved"; match_id: string }
   | { type: "match_cancelled"; fen: string }
   | { type: "error"; message: string }
   | { type: "info"; message: string }

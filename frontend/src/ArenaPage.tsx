@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChessBoard } from "./ChessBoard";
-import { buildStoredMatch, loadMatchHistory, saveMatchHistory } from "./matchHistory";
 import {
   modelLabel,
   type MatchEvent,
@@ -109,21 +108,6 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     onRunningChangeRef.current?.(next);
   }
 
-  function persistMatch(end: FinalResult) {
-    const stored = buildStoredMatch({
-      white: end.white,
-      black: end.black,
-      simulations: matchMetaRef.current.simulations,
-      result: end.result,
-      winner: end.winner,
-      termination: end.termination,
-      moves: movesRef.current,
-    });
-    const next = [stored, ...loadMatchHistory()];
-    saveMatchHistory(next);
-    onHistoryChange?.();
-  }
-
   function ensureSocket(): WebSocket {
     if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
       return wsRef.current;
@@ -194,9 +178,11 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         pendingResultRef.current = end;
         setFinalResult(end);
         setStatus("Game finished");
-        persistMatch(end);
         break;
       }
+      case "analytics_saved":
+        onHistoryChange?.();
+        break;
       case "training_complete": {
         setTrainReports(event.models);
         setStatus("Game finished · models trained");

@@ -5,7 +5,9 @@ from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
+from backend.analytics.store import append_match, clear_matches, load_matches
 from backend.chess_core.config import GameConfig
 from backend.game.match import MatchEngine
 
@@ -19,6 +21,29 @@ app.add_middleware(
 )
 
 _match_lock = asyncio.Lock()
+
+
+class MatchMoveIn(BaseModel):
+    ply: int
+    side: str
+    model: str
+    uci: str
+    san: str
+    rootValue: float = 0.0
+    topVisits: int = 0
+    totalTopVisits: int = 1
+
+
+class MatchIn(BaseModel):
+    id: str | None = None
+    playedAt: str | None = None
+    white: str
+    black: str
+    simulations: int = 64
+    result: str
+    winner: str
+    termination: str
+    moves: list[MatchMoveIn] = Field(default_factory=list)
 
 
 @app.get("/api/health")
@@ -46,6 +71,52 @@ def models() -> dict[str, Any]:
             "mode": "One game per Start · result is win/loss/draw · then both self-train",
         },
     }
+
+
+@app.get("/api/analytics/matches")
+def get_matches() -> dict[str, Any]:
+    matches = load_matches()
+    return {"matches": matches, "count": len(matches)}
+
+
+@app.post("/api/analytics/matches")
+def post_match(match: MatchIn) -> dict[str, Any]:
+    payload = match.model_dump()
+    if not payload.get("id"):
+        from backend.analytics.store import build_match_record
+
+        payload = build_match_record(
+            white=payload["white"],
+            black=payload["black"],
+            simulations=payload["simulations"],
+            result=payload["result"],
+            winner=payload["winner"],
+            termination=payload["termination"],
+            history=[
+                {
+                    "ply": m["ply"],
+                    "side": m["side"],
+                    "model": m["model"],
+                    "uci": m["uci"],
+                    "san": m["san"],
+                    "mcts": {
+                        "root_value": m["rootValue"],
+                        "top_moves": [
+                            {"visits": m["topVisits"]},
+                        ],
+                    },
+                }
+                for m in payload["moves"]
+            ],
+        )
+    saved = append_match(payload)
+    return {"ok": True, "match": saved}
+
+
+@app.delete("/api/analytics/matches")
+def delete_matches() -> dict[str, Any]:
+    clear_matches()
+    return {"ok": True, "count": 0}
 
 
 @app.websocket("/ws/match")

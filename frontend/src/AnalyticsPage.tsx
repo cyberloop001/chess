@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  clearMatchHistory,
+  clearMatchHistoryRemote,
   computeAnalytics,
   type AnalyticsSummary,
 } from "./matchHistory";
@@ -9,6 +9,7 @@ import { modelLabel, shortModel, type StoredMatch } from "./types";
 type Props = {
   matches: StoredMatch[];
   onClear: () => void;
+  onRefresh?: () => void;
 };
 
 function pct(n: number): string {
@@ -155,10 +156,17 @@ function selectedConfidenceSeries(match: StoredMatch | null) {
   ];
 }
 
-export function AnalyticsPage({ matches, onClear }: Props) {
+export function AnalyticsPage({ matches, onClear, onRefresh }: Props) {
   const summary: AnalyticsSummary = useMemo(() => computeAnalytics(matches), [matches]);
   const [selectedId, setSelectedId] = useState<string | null>(matches[0]?.id ?? null);
+  const [busy, setBusy] = useState(false);
   const selected = matches.find((m) => m.id === selectedId) ?? matches[0] ?? null;
+
+  useEffect(() => {
+    if (matches.length > 0 && !matches.some((m) => m.id === selectedId)) {
+      setSelectedId(matches[0]?.id ?? null);
+    }
+  }, [matches, selectedId]);
 
   return (
     <main className="analytics">
@@ -166,28 +174,37 @@ export function AnalyticsPage({ matches, onClear }: Props) {
         <div>
           <h2 className="analytics-title">Analytics</h2>
           <p className="analytics-sub">
-            Head-to-head results and MCTS search signals across finished duels.
+            Server-saved head-to-head results and MCTS search signals across finished duels.
           </p>
         </div>
-        <button
-          className="btn btn-ghost"
-          disabled={matches.length === 0}
-          onClick={() => {
-            clearMatchHistory();
-            onClear();
-            setSelectedId(null);
-          }}
-        >
-          Clear history
-        </button>
+        <div className="actions">
+          <button className="btn btn-ghost" disabled={busy} onClick={() => onRefresh?.()}>
+            Refresh
+          </button>
+          <button
+            className="btn btn-ghost"
+            disabled={matches.length === 0 || busy}
+            onClick={() => {
+              setBusy(true);
+              void clearMatchHistoryRemote()
+                .then(() => {
+                  onClear();
+                  setSelectedId(null);
+                })
+                .finally(() => setBusy(false));
+            }}
+          >
+            Clear history
+          </button>
+        </div>
       </section>
 
       {summary.finishedMatches === 0 ? (
         <section className="panel analytics-empty">
           <h3>No finished matches yet</h3>
           <p>
-            Run a full duel on the Arena page. Completed games are saved in this browser and show up
-            here.
+            Run a full duel on the Arena page. Completed games are saved on the backend server at{" "}
+            <code>data/match_history.json</code> and appear here.
           </p>
         </section>
       ) : (
