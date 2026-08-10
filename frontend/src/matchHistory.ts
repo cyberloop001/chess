@@ -1,25 +1,19 @@
 import type { MoveEvent, StoredMatch } from "./types";
 
-const STORAGE_KEY = "ply-arena-match-history-v1";
-const MAX_MATCHES = 100;
-
-export function loadMatchHistory(): StoredMatch[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as StoredMatch[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+export async function fetchMatchHistory(): Promise<StoredMatch[]> {
+  const res = await fetch("/api/analytics/matches");
+  if (!res.ok) {
+    throw new Error(`Failed to load analytics (${res.status})`);
   }
+  const data = (await res.json()) as { matches?: StoredMatch[] };
+  return Array.isArray(data.matches) ? data.matches : [];
 }
 
-export function saveMatchHistory(matches: StoredMatch[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(matches.slice(0, MAX_MATCHES)));
-}
-
-export function clearMatchHistory(): void {
-  localStorage.removeItem(STORAGE_KEY);
+export async function clearMatchHistoryRemote(): Promise<void> {
+  const res = await fetch("/api/analytics/matches", { method: "DELETE" });
+  if (!res.ok) {
+    throw new Error(`Failed to clear analytics (${res.status})`);
+  }
 }
 
 export function buildStoredMatch(input: {
@@ -41,7 +35,7 @@ export function buildStoredMatch(input: {
     winner: input.winner,
     termination: input.termination,
     moves: input.moves.map((m) => {
-      const visits = m.mcts.top_moves.map((t) => t.visits);
+      const visits = (m.mcts?.top_moves ?? []).map((t) => t.visits);
       const topVisits = visits[0] ?? 0;
       const totalTopVisits = visits.reduce((a, b) => a + b, 0) || 1;
       return {
@@ -50,7 +44,7 @@ export function buildStoredMatch(input: {
         model: m.model,
         uci: m.uci,
         san: m.san,
-        rootValue: m.mcts.root_value,
+        rootValue: m.mcts?.root_value ?? 0,
         topVisits,
         totalTopVisits,
       };

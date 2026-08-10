@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChessBoard } from "./ChessBoard";
-import { buildStoredMatch, loadMatchHistory, saveMatchHistory } from "./matchHistory";
 import {
   modelLabel,
   type MatchEvent,
@@ -24,17 +24,47 @@ type FinalResult = {
   black: string;
 };
 
+function formatTermination(raw: string): string {
+  return raw
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function formatResult(final: FinalResult): string {
+  const why = formatTermination(final.termination);
   if (final.winner === "draw" || final.result === "1/2-1/2") {
-    return `Draw (${final.result}) · ${final.termination}`;
+    return `Draw · ${why}`;
   }
   if (final.winner === "mlp") {
-    return `MLP + MCTS wins · ${final.result} · ${final.termination}`;
+    return `MLP + MCTS wins · ${final.result} · ${why}`;
   }
   if (final.winner === "transformer") {
-    return `Transformer + MCTS wins · ${final.result} · ${final.termination}`;
+    return `Transformer + MCTS wins · ${final.result} · ${why}`;
   }
-  return `Result ${final.result} · ${final.termination}`;
+  return `${final.result} · ${why}`;
+}
+
+function explainMove(m: MoveEvent): { title: string; lines: string[] } {
+  const side = m.side === "white" ? "White" : "Black";
+  const lines = [
+    `${side} · ${modelLabel(m.model)}`,
+    `Played ${m.san} (${m.uci})`,
+  ];
+  const mcts = m.mcts;
+  if (mcts) {
+    lines.push(`MCTS root value ${mcts.root_value} · ${mcts.simulations} sims`);
+    if (mcts.top_moves?.length) {
+      lines.push("Top candidates:");
+      for (const tm of mcts.top_moves.slice(0, 3)) {
+        lines.push(`${tm.uci} · visits ${tm.visits} · Q ${tm.q}`);
+      }
+    }
+  } else {
+    lines.push("No MCTS details for this move.");
+  }
+  return { title: `Ply ${m.ply} · ${m.san}`, lines };
 }
 
 export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
@@ -49,6 +79,12 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [latestMcts, setLatestMcts] = useState<MoveEvent["mcts"] | null>(null);
   const [trainReports, setTrainReports] = useState<TrainModelReport[]>([]);
   const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
+  const [hoverTip, setHoverTip] = useState<{
+    x: number;
+    y: number;
+    title: string;
+    lines: string[];
+  } | null>(null);
   const matchMetaRef = useRef({ white: "mlp", black: "transformer", simulations: 64 });
   const movesRef = useRef<MoveEvent[]>([]);
   const pendingResultRef = useRef<FinalResult | null>(null);
@@ -70,21 +106,6 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   function setRunningState(next: boolean) {
     setRunning(next);
     onRunningChangeRef.current?.(next);
-  }
-
-  function persistMatch(end: FinalResult) {
-    const stored = buildStoredMatch({
-      white: end.white,
-      black: end.black,
-      simulations: matchMetaRef.current.simulations,
-      result: end.result,
-      winner: end.winner,
-      termination: end.termination,
-      moves: movesRef.current,
-    });
-    const next = [stored, ...loadMatchHistory()];
-    saveMatchHistory(next);
-    onHistoryChange?.();
   }
 
   function ensureSocket(): WebSocket {
@@ -156,19 +177,15 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         };
         pendingResultRef.current = end;
         setFinalResult(end);
-        setStatus(formatResult(end));
-        persistMatch(end);
+        setStatus("Game finished");
         break;
       }
+      case "analytics_saved":
+        onHistoryChange?.();
+        break;
       case "training_complete": {
         setTrainReports(event.models);
-        const summary = event.models
-          .map((m) => `${modelLabel(m.model)} loss ${m.total_loss}`)
-          .join(" · ");
-        const base = pendingResultRef.current
-          ? formatResult(pendingResultRef.current)
-          : "Game finished";
-        setStatus(`${base} · trained (${summary})`);
+        setStatus("Game finished · models trained");
         break;
       }
       case "series_end": {
@@ -182,7 +199,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           black: event.black || matchMetaRef.current.black,
         };
         setFinalResult(end);
-        setStatus(formatResult(end));
+        setStatus("Game finished");
         break;
       }
       case "match_cancelled":
@@ -270,12 +287,13 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         </div>
         <div className="status-pill">
           <span className={`dot ${running ? "" : "idle"}`} />
-          {status}
+          <span className="status-text">{status}</span>
         </div>
         {finalResult && (
           <div className={`result-banner result-${resultKind}`}>
             <span className="result-label">Final result</span>
             <strong>{formatResult(finalResult)}</strong>
+            <span className="result-score">{finalResult.result}</span>
           </div>
         )}
         {trainReports.length > 0 && (
@@ -304,24 +322,45 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           </div>
         </div>
         <ChessBoard fen={fen} lastUci={lastUci} />
-        {finalResult && (
-          <div className={`result-banner result-banner-board result-${resultKind}`}>
-            <strong>{formatResult(finalResult)}</strong>
-          </div>
-        )}
       </section>
 
       <section className="panel">
         <h2>Moves</h2>
         <ol className="move-list">
           {moves.map((m) => (
-            <li key={`${m.game_index ?? 0}-${m.ply}`}>
+            <li
+              key={`${m.game_index ?? 0}-${m.ply}`}
+              className="move-item"
+              onMouseEnter={(e) => {
+                const tip = explainMove(m);
+                const rect = e.currentTarget.getBoundingClientRect();
+                const tipWidth = 280;
+                const x = Math.min(Math.max(8, rect.left), window.innerWidth - tipWidth - 8);
+                const y = rect.bottom + 8;
+                setHoverTip({ x, y, title: tip.title, lines: tip.lines });
+              }}
+              onMouseLeave={() => setHoverTip(null)}
+            >
               <span>{m.ply}.</span>
               <span className="san">{m.san}</span>
               <span className="model">{modelLabel(m.model)}</span>
             </li>
           ))}
         </ol>
+        {hoverTip &&
+          createPortal(
+            <div
+              className="move-tip-float"
+              style={{ left: hoverTip.x, top: hoverTip.y }}
+              role="tooltip"
+            >
+              <strong>{hoverTip.title}</strong>
+              {hoverTip.lines.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>,
+            document.body,
+          )}
         {latestMcts && (
           <div className="mcts-box">
             <div>

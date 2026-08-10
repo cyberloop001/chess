@@ -9,6 +9,7 @@ import chess
 import numpy as np
 import torch
 
+from backend.analytics.store import append_match, build_match_record
 from backend.chess_core.config import GameConfig, MCTSConfig, ModelConfig
 from backend.chess_core.encoding import board_to_tensor
 from backend.mcts import MCTS
@@ -307,6 +308,23 @@ class MatchEngine:
             else "unknown",
         }
         await emit({k: v for k, v in outcome.items() if k != "train_steps"})
+
+        # Persist analytics on the server
+        try:
+            record = build_match_record(
+                white=white_name,
+                black=black_name,
+                simulations=mcts_cfg.simulations,
+                result=result,
+                winner=outcome["winner"],
+                termination=outcome["termination"],
+                history=history,
+            )
+            append_match(record)
+            await emit({"type": "analytics_saved", "match_id": record["id"]})
+        except Exception as exc:  # noqa: BLE001 - never fail the match on analytics I/O
+            await emit({"type": "info", "message": f"Analytics save failed: {exc}"})
+
         return outcome
 
     def _train_from_outcome(
