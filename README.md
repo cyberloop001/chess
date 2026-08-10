@@ -56,10 +56,11 @@ cd frontend
 npm run dev
 ```
 
-Open http://127.0.0.1:5173 and click **Start duel**.
+Open http://127.0.0.1:8080 and click **Start duel**.
 
 ## Notes
 
+- Use the **Analytics** tab for head-to-head results, win rates, and MCTS charts (saved in the browser after finished games).
 - Untrained random weights still produce legal games (search + masking). Strength comes after self-play training.
 - Drop checkpoints at `weights/mlp.pt` and `weights/transformer.pt` to load trained nets.
 - Self-play stub: `python -m backend.training.self_play --model mlp --simulations 32`

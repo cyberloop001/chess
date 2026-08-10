@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     // Bind IPv4 loopback — Astrill/VPN often breaks localhost / ::1
     host: "127.0.0.1",
-    port: 5173,
+    port: 8080,
     strictPort: true,
     proxy: {
       "/api": "http://127.0.0.1:8000",
