@@ -431,7 +431,7 @@ button {
   gap: 0.35rem;
 }
 
-.move-list li {
+.move-item {
   display: grid;
   grid-template-columns: 2.2rem minmax(0, 1fr) auto;
   gap: 0.5rem;
@@ -439,6 +439,11 @@ button {
   border-bottom: 1px solid var(--line);
   font-size: 0.9rem;
   animation: rise 280ms ease-out both;
+  cursor: help;
+}
+
+.move-item:hover {
+  background: rgba(15, 122, 114, 0.08);
 }
 
 .move-list .san {
@@ -448,6 +453,28 @@ button {
 .move-list .model {
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.move-tip-float {
+  position: fixed;
+  z-index: 10000;
+  min-width: 240px;
+  max-width: 300px;
+  padding: 0.8rem 0.9rem;
+  background: #1a2332;
+  color: #f3f7fb;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  pointer-events: none;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.move-tip-float strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
 }
 
 .mcts-box {
