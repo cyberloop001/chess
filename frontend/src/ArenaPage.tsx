@@ -74,6 +74,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [moves, setMoves] = useState<MoveEvent[]>([]);
   const [status, setStatus] = useState("Ready for a duel");
   const [running, setRunning] = useState(false);
+  const [training, setTraining] = useState(false);
   const [thinkingSide, setThinkingSide] = useState<"white" | "black" | null>(null);
   const [lastUci, setLastUci] = useState<string | null>(null);
   const [latestMcts, setLatestMcts] = useState<MoveEvent["mcts"] | null>(null);
@@ -105,8 +106,13 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
 
   function setRunningState(next: boolean) {
     setRunning(next);
-    onRunningChangeRef.current?.(next);
   }
+
+  const busy = running || training;
+
+  useEffect(() => {
+    onRunningChangeRef.current?.(busy);
+  }, [busy]);
 
   function ensureSocket(): WebSocket {
     if (wsRef.current && wsRef.current.readyState <= WebSocket.OPEN) {
@@ -119,6 +125,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     };
     ws.onclose = () => {
       setRunningState(false);
+      setTraining(false);
       setThinkingSide(null);
     };
     return ws;
@@ -128,6 +135,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     switch (event.type) {
       case "series_start":
         setRunningState(true);
+        setTraining(false);
         setTrainReports([]);
         setFinalResult(null);
         pendingResultRef.current = null;
@@ -148,6 +156,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         setLatestMcts(null);
         setFinalResult(null);
         pendingResultRef.current = null;
+        setTraining(false);
         setRunningState(true);
         setStatus(`${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`);
         break;
@@ -177,19 +186,26 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         };
         pendingResultRef.current = end;
         setFinalResult(end);
-        setStatus("Game finished");
+        setTraining(true);
+        setStatus("Game finished · training models…");
         break;
       }
       case "analytics_saved":
         onHistoryChange?.();
         break;
+      case "training_start":
+        setTraining(true);
+        setStatus("Training models… please wait");
+        break;
       case "training_complete": {
         setTrainReports(event.models);
+        setTraining(false);
         setStatus("Game finished · models trained");
         break;
       }
       case "series_end": {
         setRunningState(false);
+        setTraining(false);
         setThinkingSide(null);
         const end: FinalResult = pendingResultRef.current ?? {
           result: event.result || "unknown",
@@ -199,16 +215,20 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           black: event.black || matchMetaRef.current.black,
         };
         setFinalResult(end);
-        setStatus("Game finished");
+        setStatus((prev) =>
+          prev.includes("models trained") ? prev : "Game finished · models trained",
+        );
         break;
       }
       case "match_cancelled":
         setRunningState(false);
+        setTraining(false);
         setThinkingSide(null);
         setStatus("Match cancelled");
         break;
       case "error":
         setRunningState(false);
+        setTraining(false);
         setStatus(event.message);
         break;
       default:
@@ -225,6 +245,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     setTrainReports([]);
     setFinalResult(null);
     pendingResultRef.current = null;
+    setTraining(false);
     setStatus("Connecting…");
     const ws = ensureSocket();
     const payload = {
@@ -244,6 +265,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   }
 
   function cancelMatch() {
+    if (training) return;
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: "cancel" }));
@@ -278,17 +300,27 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           </div>
         </div>
         <div className="actions">
-          <button className="btn btn-primary" disabled={running} onClick={startMatch}>
-            Start duel
+          <button className="btn btn-primary" disabled={busy} onClick={startMatch}>
+            {training ? "Training…" : "Start duel"}
           </button>
-          <button className="btn btn-ghost" disabled={!running} onClick={cancelMatch}>
+          <button
+            className="btn btn-ghost"
+            disabled={!running || training}
+            onClick={cancelMatch}
+          >
             Cancel
           </button>
         </div>
         <div className="status-pill">
-          <span className={`dot ${running ? "" : "idle"}`} />
+          <span className={`dot ${busy ? "" : "idle"}`} />
           <span className="status-text">{status}</span>
         </div>
+        {training && (
+          <div className="train-box train-box-live">
+            <strong>Training in progress</strong>
+            <p>Both models are updating from this game. Start duel stays locked until this finishes.</p>
+          </div>
+        )}
         {finalResult && (
           <div className={`result-banner result-${resultKind}`}>
             <span className="result-label">Final result</span>
@@ -296,9 +328,9 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
             <span className="result-score">{finalResult.result}</span>
           </div>
         )}
-        {trainReports.length > 0 && (
+        {!training && trainReports.length > 0 && (
           <div className="train-box">
-            <strong>Training after game</strong>
+            <strong>Training complete</strong>
             <ul>
               {trainReports.map((r) => (
                 <li key={r.model}>

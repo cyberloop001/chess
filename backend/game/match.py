@@ -155,6 +155,7 @@ class MatchEngine:
 
             games.append(outcome)
 
+            await emit({"type": "training_start", "game": game_idx + 1})
             train_info = await asyncio.to_thread(
                 self._train_from_outcome,
                 nets,
