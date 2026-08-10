@@ -240,7 +240,7 @@ class MatchEngine:
             }
         )
 
-        while not board.is_game_over() and len(history) < self.config.max_moves:
+        while not board.is_game_over(claim_draw=True):
             if self._cancelled:
                 await emit({"type": "match_cancelled", "fen": board.fen()})
                 return {"result": "cancelled", "history": history, "fen": board.fen()}
