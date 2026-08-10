@@ -336,11 +336,6 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     <main className="layout">
       <section className="panel">
         <h2>Match setup</h2>
-        <p className="setup-note">
-          Fixed duel: White = MLP + MCTS, Black = Transformer + MCTS. Set how many times to
-          duel → train. After each game both models self-train, then the next duel starts until
-          the count is reached.
-        </p>
         <div className="pairing">
           <div>
             <span className="pairing-label">White</span>
