@@ -176,6 +176,58 @@ button {
   font-size: 1.05rem;
 }
 
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.85rem 0 0.35rem;
+}
+
+.field input[type="number"] {
+  width: 100%;
+  max-width: 8rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2, transparent);
+  color: var(--ink);
+  font: inherit;
+}
+
+.field input[type="number"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.series-progress {
+  margin-top: 0.85rem;
+  font-size: 0.85rem;
+}
+
+.series-progress strong {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--ink);
+}
+
+.series-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+  overflow: hidden;
+}
+
+.series-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent, #2f6fed);
+  transition: width 0.25s ease;
+}
+
 .train-box {
   margin-top: 1rem;
   padding-top: 0.85rem;

@@ -76,15 +76,16 @@ class MatchEngine:
         white_model: str | None = None,
         black_model: str | None = None,
         simulations: int | None = None,
+        train_count: int = 1,
     ) -> dict[str, Any]:
-        """Play a single game, show result, train, and stop."""
+        """Play duel → train, repeating train_count times."""
         return await self.play_series(
             on_event=on_event,
             white_model=white_model,
             black_model=black_model,
             simulations=simulations,
             play_until_win=False,
-            max_games=1,
+            max_games=train_count,
         )
 
     async def play_series(
@@ -98,10 +99,11 @@ class MatchEngine:
         max_games: int = 1,
     ) -> dict[str, Any]:
         self._cancelled = False
+        train_count = max(1, min(int(max_games), 100))
         series = SeriesConfig(
             simulations=self.config.mcts.simulations,
             move_delay_ms=self.config.move_delay_ms,
-            max_games=max(1, max_games),
+            max_games=train_count,
             play_until_decisive=play_until_win,
         )
         if simulations is not None:
@@ -128,6 +130,7 @@ class MatchEngine:
                 "simulations": series.simulations,
                 "play_until_win": series.play_until_decisive,
                 "max_games": series.max_games,
+                "train_count": series.max_games,
             }
         )
 
@@ -155,29 +158,41 @@ class MatchEngine:
 
             games.append(outcome)
 
-            await emit({"type": "training_start", "game": game_idx + 1})
+            await emit(
+                {
+                    "type": "training_start",
+                    "game": game_idx + 1,
+                    "train_count": series.max_games,
+                }
+            )
             train_info = await asyncio.to_thread(
                 self._train_from_outcome,
                 nets,
                 outcome,
                 series,
             )
-            await emit({"type": "training_complete", "game": game_idx + 1, **train_info})
+            await emit(
+                {
+                    "type": "training_complete",
+                    "game": game_idx + 1,
+                    "train_count": series.max_games,
+                    **train_info,
+                }
+            )
 
             winner = outcome.get("winner")
             if winner in (MLP_ID, TRANSFORMER_ID):
                 series_winner = winner
 
-            # Default: one game only. Optional series mode stops on decisive result.
-            if not series.play_until_decisive:
-                break
-            if winner in (MLP_ID, TRANSFORMER_ID):
+            # Optional early stop when a decisive result is required.
+            if series.play_until_decisive and winner in (MLP_ID, TRANSFORMER_ID):
                 break
 
         last = games[-1] if games else {}
         final = {
             "type": "series_end",
             "game_count": len(games),
+            "train_count": series.max_games,
             "series_winner": series_winner or last.get("winner") or "none",
             "result": last.get("result"),
             "termination": last.get("termination"),

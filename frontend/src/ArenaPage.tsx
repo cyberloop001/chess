@@ -70,6 +70,9 @@ function explainMove(m: MoveEvent): { title: string; lines: string[] } {
 export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [whiteModel, setWhiteModel] = useState<ModelId>("mlp");
   const [blackModel, setBlackModel] = useState<ModelId>("transformer");
+  const [trainCount, setTrainCount] = useState(1);
+  const [seriesGame, setSeriesGame] = useState(0);
+  const [seriesTotal, setSeriesTotal] = useState(1);
   const [fen, setFen] = useState(START_FEN);
   const [moves, setMoves] = useState<MoveEvent[]>([]);
   const [status, setStatus] = useState("Ready for a duel");
@@ -89,6 +92,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const matchMetaRef = useRef({ white: "mlp", black: "transformer", simulations: 64 });
   const movesRef = useRef<MoveEvent[]>([]);
   const pendingResultRef = useRef<FinalResult | null>(null);
+  const seriesTotalRef = useRef(1);
   const wsRef = useRef<WebSocket | null>(null);
   const onRunningChangeRef = useRef(onRunningChange);
   onRunningChangeRef.current = onRunningChange;
@@ -133,15 +137,27 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
 
   function handleEvent(event: MatchEvent) {
     switch (event.type) {
-      case "series_start":
+      case "series_start": {
+        const total = event.train_count ?? event.max_games ?? 1;
+        seriesTotalRef.current = total;
+        setSeriesTotal(total);
+        setSeriesGame(0);
         setRunningState(true);
         setTraining(false);
         setTrainReports([]);
         setFinalResult(null);
         pendingResultRef.current = null;
-        setStatus(`${modelLabel(event.white)} vs ${modelLabel(event.black)}`);
+        setStatus(
+          total > 1
+            ? `Training series · ${total} games · ${modelLabel(event.white)} vs ${modelLabel(event.black)}`
+            : `${modelLabel(event.white)} vs ${modelLabel(event.black)}`,
+        );
         break;
-      case "match_start":
+      }
+      case "match_start": {
+        const idx = event.game_index ?? 1;
+        const total = seriesTotalRef.current;
+        setSeriesGame(idx);
         matchMetaRef.current = {
           white: event.white,
           black: event.black,
@@ -158,8 +174,13 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         pendingResultRef.current = null;
         setTraining(false);
         setRunningState(true);
-        setStatus(`${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`);
+        setStatus(
+          total > 1
+            ? `Game ${idx} of ${total} · ${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`
+            : `${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`,
+        );
         break;
+      }
       case "thinking":
         setThinkingSide(event.side);
         setStatus(`${modelLabel(event.model)} is searching…`);
@@ -187,20 +208,40 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         pendingResultRef.current = end;
         setFinalResult(end);
         setTraining(true);
-        setStatus("Game finished · training models…");
+        {
+          const idx = event.game_index ?? (seriesGame || 1);
+          const total = seriesTotalRef.current;
+          setStatus(
+            total > 1
+              ? `Game ${idx} of ${total} finished · training models…`
+              : "Game finished · training models…",
+          );
+        }
         break;
       }
       case "analytics_saved":
         onHistoryChange?.();
         break;
-      case "training_start":
+      case "training_start": {
+        const total = event.train_count ?? seriesTotalRef.current;
         setTraining(true);
-        setStatus("Training models… please wait");
+        setStatus(
+          total > 1
+            ? `Training after game ${event.game} of ${total}…`
+            : "Training models… please wait",
+        );
         break;
+      }
       case "training_complete": {
+        const total = event.train_count ?? seriesTotalRef.current;
         setTrainReports(event.models);
         setTraining(false);
-        setStatus("Game finished · models trained");
+        setStatus(
+          total > 1
+            ? `Trained ${event.game} of ${total}` +
+              (event.game < total ? " · starting next duel…" : " · series complete")
+            : "Game finished · models trained",
+        );
         break;
       }
       case "series_end": {
@@ -215,8 +256,12 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           black: event.black || matchMetaRef.current.black,
         };
         setFinalResult(end);
-        setStatus((prev) =>
-          prev.includes("models trained") ? prev : "Game finished · models trained",
+        const played = event.game_count;
+        const total = event.train_count ?? seriesTotalRef.current;
+        setStatus(
+          total > 1
+            ? `Series finished · ${played} of ${total} games trained`
+            : "Game finished · models trained",
         );
         break;
       }
@@ -237,6 +282,11 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   }
 
   function startMatch() {
+    const n = Math.max(1, Math.min(100, Math.floor(Number(trainCount) || 1)));
+    setTrainCount(n);
+    seriesTotalRef.current = n;
+    setSeriesTotal(n);
+    setSeriesGame(0);
     setFen(START_FEN);
     setMoves([]);
     movesRef.current = [];
@@ -246,12 +296,13 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     setFinalResult(null);
     pendingResultRef.current = null;
     setTraining(false);
-    setStatus("Connecting…");
+    setStatus(n > 1 ? `Connecting · ${n} train cycles…` : "Connecting…");
     const ws = ensureSocket();
     const payload = {
       action: "start",
       white_model: "mlp",
       black_model: "transformer",
+      train_count: n,
     };
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(payload));
@@ -286,8 +337,9 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
       <section className="panel">
         <h2>Match setup</h2>
         <p className="setup-note">
-          Fixed duel: White = MLP + MCTS, Black = Transformer + MCTS. Plays one game, shows the
-          result (win / loss / draw), then both models self-train.
+          Fixed duel: White = MLP + MCTS, Black = Transformer + MCTS. Set how many times to
+          duel → train. After each game both models self-train, then the next duel starts until
+          the count is reached.
         </p>
         <div className="pairing">
           <div>
@@ -299,9 +351,29 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
             <strong>{modelLabel(blackModel)}</strong>
           </div>
         </div>
+        <label className="field">
+          <span className="pairing-label">Train count</span>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            step={1}
+            value={trainCount}
+            disabled={busy}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (!Number.isFinite(v)) {
+                setTrainCount(1);
+                return;
+              }
+              setTrainCount(Math.max(1, Math.min(100, Math.floor(v))));
+            }}
+          />
+          <span className="field-hint">Games to play and train (1–100)</span>
+        </label>
         <div className="actions">
           <button className="btn btn-primary" disabled={busy} onClick={startMatch}>
-            {training ? "Training…" : "Start duel"}
+            {training ? "Training…" : seriesTotal > 1 && running ? "Series running…" : "Start duel"}
           </button>
           <button
             className="btn btn-ghost"
@@ -315,15 +387,34 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           <span className={`dot ${busy ? "" : "idle"}`} />
           <span className="status-text">{status}</span>
         </div>
+        {(running || training || seriesGame > 0) && seriesTotal > 1 && (
+          <div className="series-progress">
+            <strong>
+              Progress · {Math.min(seriesGame, seriesTotal)} / {seriesTotal}
+            </strong>
+            <div className="series-bar" aria-hidden>
+              <div
+                className="series-bar-fill"
+                style={{ width: `${(Math.min(seriesGame, seriesTotal) / seriesTotal) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
         {training && (
           <div className="train-box train-box-live">
             <strong>Training in progress</strong>
-            <p>Both models are updating from this game. Start duel stays locked until this finishes.</p>
+            <p>
+              Both models are updating from this game
+              {seriesTotal > 1 ? ` (${seriesGame} of ${seriesTotal})` : ""}. Start stays locked
+              until the full series finishes.
+            </p>
           </div>
         )}
         {finalResult && (
           <div className={`result-banner result-${resultKind}`}>
-            <span className="result-label">Final result</span>
+            <span className="result-label">
+              {seriesTotal > 1 && seriesGame > 0 ? `Game ${seriesGame} result` : "Final result"}
+            </span>
             <strong>{formatResult(finalResult)}</strong>
             <span className="result-score">{finalResult.result}</span>
           </div>
@@ -357,7 +448,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
       </section>
 
       <section className="panel">
-        <h2>Moves</h2>
+        <h2>Moves{seriesTotal > 1 && seriesGame > 0 ? ` · game ${seriesGame}` : ""}</h2>
         <ol className="move-list">
           {moves.map((m) => (
             <li
