@@ -49,6 +49,10 @@ button {
   grid-template-rows: auto 1fr;
 }
 
+.page-hidden {
+  display: none;
+}
+
 .hero {
   padding: 2.25rem clamp(1.25rem, 4vw, 3.5rem) 1rem;
   display: grid;

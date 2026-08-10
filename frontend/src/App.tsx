@@ -9,6 +9,7 @@ type Page = "arena" | "analytics";
 export default function App() {
   const [page, setPage] = useState<Page>("arena");
   const [matches, setMatches] = useState<StoredMatch[]>(() => loadMatchHistory());
+  const [duelLive, setDuelLive] = useState(false);
 
   const refreshHistory = useCallback(() => {
     setMatches(loadMatchHistory());
@@ -24,7 +25,7 @@ export default function App() {
               className={`nav-link ${page === "arena" ? "active" : ""}`}
               onClick={() => setPage("arena")}
             >
-              Arena
+              Arena{duelLive ? " · live" : ""}
             </button>
             <button
               className={`nav-link ${page === "analytics" ? "active" : ""}`}
@@ -44,11 +45,16 @@ export default function App() {
         </p>
       </header>
 
-      {page === "arena" ? (
-        <ArenaPage onHistoryChange={refreshHistory} />
-      ) : (
+      {/* Keep both pages mounted so a running duel is not reset on tab switch */}
+      <div className={page === "arena" ? "" : "page-hidden"} aria-hidden={page !== "arena"}>
+        <ArenaPage onHistoryChange={refreshHistory} onRunningChange={setDuelLive} />
+      </div>
+      <div
+        className={page === "analytics" ? "" : "page-hidden"}
+        aria-hidden={page !== "analytics"}
+      >
         <AnalyticsPage matches={matches} onClear={refreshHistory} />
-      )}
+      </div>
     </div>
   );
 }

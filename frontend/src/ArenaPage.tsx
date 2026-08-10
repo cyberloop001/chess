@@ -7,9 +7,10 @@ const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 type Props = {
   onHistoryChange?: () => void;
+  onRunningChange?: (running: boolean) => void;
 };
 
-export function ArenaPage({ onHistoryChange }: Props) {
+export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [whiteModel, setWhiteModel] = useState<ModelId>("mlp");
   const [blackModel, setBlackModel] = useState<ModelId>("transformer");
   const [simulations, setSimulations] = useState(64);
@@ -23,6 +24,8 @@ export function ArenaPage({ onHistoryChange }: Props) {
   const matchMetaRef = useRef({ white: "mlp", black: "transformer", simulations: 64 });
   const movesRef = useRef<MoveEvent[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const onRunningChangeRef = useRef(onRunningChange);
+  onRunningChangeRef.current = onRunningChange;
 
   const wsUrl = useMemo(() => {
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
@@ -34,6 +37,11 @@ export function ArenaPage({ onHistoryChange }: Props) {
       wsRef.current?.close();
     };
   }, []);
+
+  function setRunningState(next: boolean) {
+    setRunning(next);
+    onRunningChangeRef.current?.(next);
+  }
 
   function persistMatch(end: {
     result: string;
@@ -64,7 +72,7 @@ export function ArenaPage({ onHistoryChange }: Props) {
       handleEvent(JSON.parse(msg.data) as MatchEvent);
     };
     ws.onclose = () => {
-      setRunning(false);
+      setRunningState(false);
       setThinkingSide(null);
     };
     return ws;
@@ -83,7 +91,7 @@ export function ArenaPage({ onHistoryChange }: Props) {
         setMoves([]);
         setLastUci(null);
         setLatestMcts(null);
-        setRunning(true);
+        setRunningState(true);
         setStatus(`${modelLabel(event.white)} vs ${modelLabel(event.black)}`);
         break;
       case "thinking":
@@ -101,7 +109,7 @@ export function ArenaPage({ onHistoryChange }: Props) {
         break;
       }
       case "match_end":
-        setRunning(false);
+        setRunningState(false);
         setThinkingSide(null);
         setFen(event.fen);
         setStatus(`Result ${event.result} · ${event.winner}`);
@@ -112,12 +120,12 @@ export function ArenaPage({ onHistoryChange }: Props) {
         });
         break;
       case "match_cancelled":
-        setRunning(false);
+        setRunningState(false);
         setThinkingSide(null);
         setStatus("Match cancelled");
         break;
       case "error":
-        setRunning(false);
+        setRunningState(false);
         setStatus(event.message);
         break;
       default:
@@ -141,11 +149,11 @@ export function ArenaPage({ onHistoryChange }: Props) {
     };
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(payload));
-      setRunning(true);
+      setRunningState(true);
     } else {
       ws.onopen = () => {
         ws.send(JSON.stringify(payload));
-        setRunning(true);
+        setRunningState(true);
       };
     }
   }
