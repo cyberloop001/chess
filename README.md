@@ -63,4 +63,4 @@ Open http://127.0.0.1:8080 and click **Start duel**.
 - **Arena:** White = MLP, Black = Transformer. One game per Start; shows win / loss / draw, then both nets self-train.
 - **Analytics** are saved on the server in `data/match_history.json` (API: `/api/analytics/matches`).
 - Checkpoints save to `weights/mlp.pt` / `weights/transformer.pt`.
-- Self-play stub: `python -m backend.training.self_play --model mlp --simulations 32`
+- Self-play stub: `python -m backend.training.self_play --model mlp --simulations 64`
