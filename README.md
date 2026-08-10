@@ -60,7 +60,7 @@ Open http://127.0.0.1:8080 and click **Start duel**.
 
 ## Notes
 
-- Use the **Analytics** tab for head-to-head results, win rates, and MCTS charts (saved in the browser after finished games).
-- Untrained random weights still produce legal games (search + masking). Strength comes after self-play training.
-- Drop checkpoints at `weights/mlp.pt` and `weights/transformer.pt` to load trained nets.
+- **Arena:** White = MLP, Black = Transformer. One game per Start; shows win / loss / draw, then both nets self-train.
+- Checkpoints save to `weights/mlp.pt` / `weights/transformer.pt`.
+- Use the **Analytics** tab for head-to-head results and MCTS charts.
 - Self-play stub: `python -m backend.training.self_play --model mlp --simulations 32`

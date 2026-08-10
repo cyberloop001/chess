@@ -40,7 +40,11 @@ def models() -> dict[str, Any]:
                 "name": "Transformer + MCTS",
                 "description": "Square-token Transformer policy/value network with PUCT search",
             },
-        ]
+        ],
+        "rules": {
+            "pairing": "White = MLP, Black = Transformer",
+            "mode": "One game per Start · result is win/loss/draw · then both self-train",
+        },
     }
 
 
@@ -63,9 +67,8 @@ async def match_socket(ws: WebSocket) -> None:
                 async with _match_lock:
                     await engine.play(
                         on_event=send,
-                        white_model=payload.get("white_model", "mlp"),
-                        black_model=payload.get("black_model", "transformer"),
-                        simulations=int(payload.get("simulations", 64)),
+                        white_model="mlp",
+                        black_model="transformer",
                     )
             elif action == "cancel":
                 engine.cancel()

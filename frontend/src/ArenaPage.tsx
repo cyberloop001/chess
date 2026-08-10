@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChessBoard } from "./ChessBoard";
 import { buildStoredMatch, loadMatchHistory, saveMatchHistory } from "./matchHistory";
-import { modelLabel, type MatchEvent, type ModelId, type MoveEvent } from "./types";
+import {
+  modelLabel,
+  type MatchEvent,
+  type ModelId,
+  type MoveEvent,
+  type TrainModelReport,
+} from "./types";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -10,10 +16,30 @@ type Props = {
   onRunningChange?: (running: boolean) => void;
 };
 
+type FinalResult = {
+  result: string;
+  winner: string;
+  termination: string;
+  white: string;
+  black: string;
+};
+
+function formatResult(final: FinalResult): string {
+  if (final.winner === "draw" || final.result === "1/2-1/2") {
+    return `Draw (${final.result}) · ${final.termination}`;
+  }
+  if (final.winner === "mlp") {
+    return `MLP + MCTS wins · ${final.result} · ${final.termination}`;
+  }
+  if (final.winner === "transformer") {
+    return `Transformer + MCTS wins · ${final.result} · ${final.termination}`;
+  }
+  return `Result ${final.result} · ${final.termination}`;
+}
+
 export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [whiteModel, setWhiteModel] = useState<ModelId>("mlp");
   const [blackModel, setBlackModel] = useState<ModelId>("transformer");
-  const [simulations, setSimulations] = useState(64);
   const [fen, setFen] = useState(START_FEN);
   const [moves, setMoves] = useState<MoveEvent[]>([]);
   const [status, setStatus] = useState("Ready for a duel");
@@ -21,8 +47,11 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [thinkingSide, setThinkingSide] = useState<"white" | "black" | null>(null);
   const [lastUci, setLastUci] = useState<string | null>(null);
   const [latestMcts, setLatestMcts] = useState<MoveEvent["mcts"] | null>(null);
+  const [trainReports, setTrainReports] = useState<TrainModelReport[]>([]);
+  const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
   const matchMetaRef = useRef({ white: "mlp", black: "transformer", simulations: 64 });
   const movesRef = useRef<MoveEvent[]>([]);
+  const pendingResultRef = useRef<FinalResult | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const onRunningChangeRef = useRef(onRunningChange);
   onRunningChangeRef.current = onRunningChange;
@@ -43,14 +72,10 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     onRunningChangeRef.current?.(next);
   }
 
-  function persistMatch(end: {
-    result: string;
-    winner: string;
-    termination: string;
-  }) {
+  function persistMatch(end: FinalResult) {
     const stored = buildStoredMatch({
-      white: matchMetaRef.current.white,
-      black: matchMetaRef.current.black,
+      white: end.white,
+      black: end.black,
       simulations: matchMetaRef.current.simulations,
       result: end.result,
       winner: end.winner,
@@ -80,6 +105,13 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
 
   function handleEvent(event: MatchEvent) {
     switch (event.type) {
+      case "series_start":
+        setRunningState(true);
+        setTrainReports([]);
+        setFinalResult(null);
+        pendingResultRef.current = null;
+        setStatus(`${modelLabel(event.white)} vs ${modelLabel(event.black)}`);
+        break;
       case "match_start":
         matchMetaRef.current = {
           white: event.white,
@@ -87,12 +119,16 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           simulations: event.simulations,
         };
         movesRef.current = [];
+        setWhiteModel(event.white as ModelId);
+        setBlackModel(event.black as ModelId);
         setFen(event.fen);
         setMoves([]);
         setLastUci(null);
         setLatestMcts(null);
+        setFinalResult(null);
+        pendingResultRef.current = null;
         setRunningState(true);
-        setStatus(`${modelLabel(event.white)} vs ${modelLabel(event.black)}`);
+        setStatus(`${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`);
         break;
       case "thinking":
         setThinkingSide(event.side);
@@ -108,17 +144,47 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         setStatus(`${modelLabel(event.model)} played ${event.san}`);
         break;
       }
-      case "match_end":
-        setRunningState(false);
+      case "match_end": {
         setThinkingSide(null);
         setFen(event.fen);
-        setStatus(`Result ${event.result} · ${event.winner}`);
-        persistMatch({
+        const end: FinalResult = {
           result: event.result,
           winner: event.winner,
           termination: event.termination,
-        });
+          white: event.white || matchMetaRef.current.white,
+          black: event.black || matchMetaRef.current.black,
+        };
+        pendingResultRef.current = end;
+        setFinalResult(end);
+        setStatus(formatResult(end));
+        persistMatch(end);
         break;
+      }
+      case "training_complete": {
+        setTrainReports(event.models);
+        const summary = event.models
+          .map((m) => `${modelLabel(m.model)} loss ${m.total_loss}`)
+          .join(" · ");
+        const base = pendingResultRef.current
+          ? formatResult(pendingResultRef.current)
+          : "Game finished";
+        setStatus(`${base} · trained (${summary})`);
+        break;
+      }
+      case "series_end": {
+        setRunningState(false);
+        setThinkingSide(null);
+        const end: FinalResult = pendingResultRef.current ?? {
+          result: event.result || "unknown",
+          winner: event.series_winner,
+          termination: event.termination || "unknown",
+          white: event.white || matchMetaRef.current.white,
+          black: event.black || matchMetaRef.current.black,
+        };
+        setFinalResult(end);
+        setStatus(formatResult(end));
+        break;
+      }
       case "match_cancelled":
         setRunningState(false);
         setThinkingSide(null);
@@ -139,13 +205,15 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     movesRef.current = [];
     setLastUci(null);
     setLatestMcts(null);
+    setTrainReports([]);
+    setFinalResult(null);
+    pendingResultRef.current = null;
     setStatus("Connecting…");
     const ws = ensureSocket();
     const payload = {
       action: "start",
-      white_model: whiteModel,
-      black_model: blackModel,
-      simulations,
+      white_model: "mlp",
+      black_model: "transformer",
     };
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(payload));
@@ -165,46 +233,32 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
     }
   }
 
+  const resultKind =
+    finalResult == null
+      ? null
+      : finalResult.winner === "draw" || finalResult.result === "1/2-1/2"
+        ? "draw"
+        : finalResult.winner === "mlp"
+          ? "mlp"
+          : "transformer";
+
   return (
     <main className="layout">
       <section className="panel">
         <h2>Match setup</h2>
-        <div className="field">
-          <label htmlFor="white">White</label>
-          <select
-            id="white"
-            value={whiteModel}
-            disabled={running}
-            onChange={(e) => setWhiteModel(e.target.value as ModelId)}
-          >
-            <option value="mlp">MLP + MCTS</option>
-            <option value="transformer">Transformer + MCTS</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="black">Black</label>
-          <select
-            id="black"
-            value={blackModel}
-            disabled={running}
-            onChange={(e) => setBlackModel(e.target.value as ModelId)}
-          >
-            <option value="transformer">Transformer + MCTS</option>
-            <option value="mlp">MLP + MCTS</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="sims">MCTS simulations / move</label>
-          <input
-            id="sims"
-            type="number"
-            min={8}
-            max={400}
-            step={8}
-            disabled={running}
-            value={simulations}
-            onChange={(e) => setSimulations(Number(e.target.value))}
-          />
+        <p className="setup-note">
+          Fixed duel: White = MLP + MCTS, Black = Transformer + MCTS. Plays one game, shows the
+          result (win / loss / draw), then both models self-train.
+        </p>
+        <div className="pairing">
+          <div>
+            <span className="pairing-label">White</span>
+            <strong>{modelLabel(whiteModel)}</strong>
+          </div>
+          <div>
+            <span className="pairing-label">Black</span>
+            <strong>{modelLabel(blackModel)}</strong>
+          </div>
         </div>
         <div className="actions">
           <button className="btn btn-primary" disabled={running} onClick={startMatch}>
@@ -218,6 +272,24 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           <span className={`dot ${running ? "" : "idle"}`} />
           {status}
         </div>
+        {finalResult && (
+          <div className={`result-banner result-${resultKind}`}>
+            <span className="result-label">Final result</span>
+            <strong>{formatResult(finalResult)}</strong>
+          </div>
+        )}
+        {trainReports.length > 0 && (
+          <div className="train-box">
+            <strong>Training after game</strong>
+            <ul>
+              {trainReports.map((r) => (
+                <li key={r.model}>
+                  {modelLabel(r.model)} · {r.samples} samples · loss {r.total_loss}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       <section className="board-wrap">
@@ -232,13 +304,18 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
           </div>
         </div>
         <ChessBoard fen={fen} lastUci={lastUci} />
+        {finalResult && (
+          <div className={`result-banner result-banner-board result-${resultKind}`}>
+            <strong>{formatResult(finalResult)}</strong>
+          </div>
+        )}
       </section>
 
       <section className="panel">
         <h2>Moves</h2>
         <ol className="move-list">
           {moves.map((m) => (
-            <li key={m.ply}>
+            <li key={`${m.game_index ?? 0}-${m.ply}`}>
               <span>{m.ply}.</span>
               <span className="san">{m.san}</span>
               <span className="model">{modelLabel(m.model)}</span>
