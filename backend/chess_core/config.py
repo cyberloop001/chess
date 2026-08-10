@@ -34,4 +34,3 @@ class GameConfig:
     black_model: str = "transformer"
     mcts: MCTSConfig = field(default_factory=MCTSConfig)
     move_delay_ms: int = 400
-    max_moves: int = 300
