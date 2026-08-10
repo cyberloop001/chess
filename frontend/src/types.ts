@@ -22,6 +22,14 @@ export type MoveEvent = {
   };
 };
 
+export type MatchEndEvent = {
+  type: "match_end";
+  result: string;
+  fen: string;
+  winner: string;
+  termination: string;
+};
+
 export type MatchEvent =
   | {
       type: "match_start";
@@ -38,20 +46,41 @@ export type MatchEvent =
       ply: number;
     }
   | MoveEvent
-  | {
-      type: "match_end";
-      result: string;
-      fen: string;
-      winner: string;
-      termination: string;
-    }
+  | MatchEndEvent
   | { type: "match_cancelled"; fen: string }
   | { type: "error"; message: string }
   | { type: "info"; message: string }
   | { type: "pong" };
 
+export type StoredMatch = {
+  id: string;
+  playedAt: string;
+  white: ModelId | string;
+  black: ModelId | string;
+  simulations: number;
+  result: string;
+  winner: string;
+  termination: string;
+  moves: Array<{
+    ply: number;
+    side: "white" | "black";
+    model: string;
+    uci: string;
+    san: string;
+    rootValue: number;
+    topVisits: number;
+    totalTopVisits: number;
+  }>;
+};
+
 export function modelLabel(id: string): string {
   if (id === "mlp") return "MLP + MCTS";
   if (id === "transformer") return "Transformer + MCTS";
+  return id;
+}
+
+export function shortModel(id: string): string {
+  if (id === "mlp") return "MLP";
+  if (id === "transformer") return "Transformer";
   return id;
 }
