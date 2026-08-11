@@ -15,6 +15,7 @@ from backend.chess_core.encoding import board_to_tensor
 from backend.mcts import MCTS
 from backend.models import build_model
 from backend.models.base import AlphaZeroNet
+from backend.training.replay import get_replay_buffer
 from backend.training.trainer import train_from_samples
 
 EventCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
@@ -27,12 +28,13 @@ TRANSFORMER_ID = "transformer"
 
 @dataclass
 class SeriesConfig:
-    simulations: int = 96
+    simulations: int = 256
     move_delay_ms: int = 400
     max_games: int = 1
-    train_epochs: int = 2
-    train_batch_size: int = 16
-    train_lr: float = 1e-3
+    train_epochs: int = 4
+    train_batch_size: int = 32
+    train_lr: float = 5e-4
+    replay_batch_max: int = 2048
     swap_colors_each_game: bool = False
     play_until_decisive: bool = False
 
@@ -100,10 +102,15 @@ class MatchEngine:
     ) -> dict[str, Any]:
         self._cancelled = False
         train_count = max(1, min(int(max_games), 100))
+        train_cfg = self.config.train
         series = SeriesConfig(
             simulations=self.config.mcts.simulations,
             move_delay_ms=self.config.move_delay_ms,
             max_games=train_count,
+            train_epochs=train_cfg.epochs,
+            train_batch_size=train_cfg.batch_size,
+            train_lr=train_cfg.lr,
+            replay_batch_max=train_cfg.replay_batch_max,
             play_until_decisive=play_until_win,
         )
         if simulations is not None:
@@ -222,7 +229,7 @@ class MatchEngine:
         game_index: int,
     ) -> dict[str, Any]:
         mcts_cfg = MCTSConfig(
-            simulations=max(series.simulations, 96),
+            simulations=max(series.simulations, 1),
             c_puct=self.config.mcts.c_puct,
             dirichlet_alpha=self.config.mcts.dirichlet_alpha,
             dirichlet_epsilon=0.25,
@@ -349,13 +356,18 @@ class MatchEngine:
         outcome: dict[str, Any],
         series: SeriesConfig,
     ) -> dict[str, Any]:
-        # Train each architecture on all plies (full game), AlphaZero-style
+        # Train each architecture on latest game + replay buffer mix
         steps: list[dict[str, Any]] = outcome.get("train_steps") or []
+        buffer = get_replay_buffer()
+        train_steps = buffer.prepare_training_batch(
+            steps,
+            max_total=series.replay_batch_max,
+        )
         reports = []
         for model_id in (MLP_ID, TRANSFORMER_ID):
             report = train_from_samples(
                 nets[model_id],
-                steps,
+                train_steps,
                 model_name=model_id,
                 epochs=series.train_epochs,
                 batch_size=series.train_batch_size,
@@ -363,8 +375,11 @@ class MatchEngine:
                 device=self.device,
                 save=True,
             )
-            reports.append(asdict(report))
-        return {"models": reports}
+            info = asdict(report)
+            info["replay_size"] = len(buffer)
+            info["game_samples"] = len(steps)
+            reports.append(info)
+        return {"models": reports, "replay_size": len(buffer)}
 
 
 def _resolve_sides(white_model: str | None, black_model: str | None) -> tuple[str, str]:

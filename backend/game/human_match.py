@@ -17,6 +17,7 @@ from backend.chess_core.encoding import ACTION_SIZE, board_to_tensor, encode_mov
 from backend.mcts import MCTS
 from backend.models import build_model
 from backend.models.base import AlphaZeroNet
+from backend.training.replay import get_replay_buffer
 from backend.training.trainer import train_from_samples
 
 EventCallback = Callable[[dict[str, Any]], Awaitable[None] | None]
@@ -107,9 +108,9 @@ class HumanMatchEngine:
         white_name = "human" if human_is_white else model_id
         black_name = model_id if human_is_white else "human"
 
-        sims = simulations if simulations is not None else max(self.config.mcts.simulations, 96)
+        sims = simulations if simulations is not None else self.config.mcts.simulations
         mcts_cfg = MCTSConfig(
-            simulations=sims,
+            simulations=max(int(sims), 1),
             c_puct=self.config.mcts.c_puct,
             dirichlet_alpha=self.config.mcts.dirichlet_alpha,
             dirichlet_epsilon=0.25,
@@ -327,17 +328,26 @@ class HumanMatchEngine:
         model_id: str,
         steps: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        train_cfg = self.config.train
+        buffer = get_replay_buffer()
+        train_steps = buffer.prepare_training_batch(
+            steps,
+            max_total=train_cfg.replay_batch_max,
+        )
         report = train_from_samples(
             net,
-            steps,
+            train_steps,
             model_name=model_id,
-            epochs=2,
-            batch_size=16,
-            lr=1e-3,
+            epochs=train_cfg.epochs,
+            batch_size=train_cfg.batch_size,
+            lr=train_cfg.lr,
             device=self.device,
             save=True,
         )
-        return {"models": [asdict(report)]}
+        info = asdict(report)
+        info["replay_size"] = len(buffer)
+        info["game_samples"] = len(steps)
+        return {"models": [info], "replay_size": len(buffer)}
 
 
 def _winner_label(result: str, white: str, black: str) -> str:

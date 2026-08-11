@@ -29,8 +29,18 @@ class MCTSConfig:
 
 
 @dataclass
+class TrainConfig:
+    epochs: int = 4
+    batch_size: int = 32
+    lr: float = 5e-4
+    replay_max_samples: int = 40_000
+    replay_batch_max: int = 2048
+
+
+@dataclass
 class GameConfig:
     white_model: str = "mlp"  # "mlp" | "transformer"
     black_model: str = "transformer"
     mcts: MCTSConfig = field(default_factory=MCTSConfig)
+    train: TrainConfig = field(default_factory=TrainConfig)
     move_delay_ms: int = 400
