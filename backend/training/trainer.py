@@ -31,9 +31,9 @@ def train_from_samples(
     samples: list[dict[str, Any]],
     *,
     model_name: str,
-    epochs: int = 2,
-    batch_size: int = 16,
-    lr: float = 1e-3,
+    epochs: int = 4,
+    batch_size: int = 32,
+    lr: float = 5e-4,
     device: torch.device | None = None,
     save: bool = True,
 ) -> TrainResult:
