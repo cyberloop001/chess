@@ -15,6 +15,68 @@ const PIECES: Record<string, string> = {
   bP: "♟",
 };
 
+const START_COUNTS: Record<"w" | "b", Record<string, number>> = {
+  w: { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 },
+  b: { p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 },
+};
+
+const CAPTURE_ORDER = ["q", "r", "b", "n", "p"] as const;
+
+type CapturedPieces = {
+  white: string[];
+  black: string[];
+};
+
+function capturedFromFen(fen: string): CapturedPieces {
+  const chess = new Chess(fen);
+  const onBoard: Record<"w" | "b", Record<string, number>> = {
+    w: { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 },
+    b: { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 },
+  };
+  for (const row of chess.board()) {
+    for (const square of row) {
+      if (!square) continue;
+      onBoard[square.color][square.type] += 1;
+    }
+  }
+
+  const white: string[] = [];
+  const black: string[] = [];
+  for (const type of CAPTURE_ORDER) {
+    const missingWhite = Math.max(0, START_COUNTS.w[type] - onBoard.w[type]);
+    const missingBlack = Math.max(0, START_COUNTS.b[type] - onBoard.b[type]);
+    for (let i = 0; i < missingWhite; i += 1) white.push(`w${type.toUpperCase()}`);
+    for (let i = 0; i < missingBlack; i += 1) black.push(`b${type.toUpperCase()}`);
+  }
+  return { white, black };
+}
+
+function CapturedTray({
+  label,
+  pieces,
+  side,
+}: {
+  label: string;
+  pieces: string[];
+  side: "left" | "right";
+}) {
+  return (
+    <aside className={`captured-tray captured-${side}`} aria-label={label}>
+      <div className="captured-list">
+        {pieces.length === 0 ? (
+          <span className="captured-empty">—</span>
+        ) : (
+          pieces.map((key, i) => (
+            <span key={`${key}-${i}`} className="captured-piece" data-color={key[0]}>
+              {PIECES[key]}
+            </span>
+          ))
+        )}
+      </div>
+    </aside>
+  );
+}
+
 type Props = {
   fen: string;
   lastUci?: string | null;
@@ -42,9 +104,16 @@ export function ChessBoard({
   const flipped = orientation === "black";
 
   const rows = flipped ? [...board].reverse() : board;
+  const captured = capturedFromFen(fen);
+  const leftPieces = flipped ? captured.white : captured.black;
+  const rightPieces = flipped ? captured.black : captured.white;
+  const leftLabel = flipped ? "White captured" : "Black captured";
+  const rightLabel = flipped ? "Black captured" : "White captured";
 
   return (
-    <div className={`board ${interactive ? "board-interactive" : ""}`} aria-label="Chess board">
+    <div className="board-row">
+      <CapturedTray label={leftLabel} pieces={leftPieces} side="left" />
+      <div className={`board ${interactive ? "board-interactive" : ""}`} aria-label="Chess board">
       {rows.map((row, rankIdx) => {
         const displayRow = flipped ? [...row].reverse() : row;
         return displayRow.map((square, fileIdx) => {
@@ -93,6 +162,8 @@ export function ChessBoard({
           );
         });
       })}
+      </div>
+      <CapturedTray label={rightLabel} pieces={rightPieces} side="right" />
     </div>
   );
 }
