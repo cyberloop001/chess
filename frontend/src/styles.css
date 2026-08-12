@@ -385,6 +385,61 @@ button {
   width: 100%;
 }
 
+.board-row {
+  --board-size: min(100%, 520px, 70vh);
+  display: grid;
+  grid-template-columns: minmax(48px, 72px) var(--board-size) minmax(48px, 72px);
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.captured-tray {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.45rem 0.25rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.captured-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.captured-empty {
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.captured-piece {
+  font-size: 1.35rem;
+  line-height: 1.05;
+}
+
+.captured-piece[data-color="w"] {
+  color: #f7fafc;
+  text-shadow:
+    0 0 1px #1a2332,
+    0 1px 0 #1a2332,
+    1px 0 0 #1a2332,
+    0 -1px 0 #1a2332,
+    -1px 0 0 #1a2332;
+}
+
+.captured-piece[data-color="b"] {
+  color: #15202b;
+}
+
 .players {
   width: min(100%, 520px);
   display: flex;
@@ -412,7 +467,6 @@ button {
 }
 
 .board {
-  --board-size: min(100%, 520px, 70vh);
   width: var(--board-size);
   height: var(--board-size);
   aspect-ratio: 1 / 1;
@@ -613,8 +667,14 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .board {
+  .board-row {
     --board-size: min(100%, 520px, 62vh);
+    grid-template-columns: 40px var(--board-size) 40px;
+    gap: 0.3rem;
+  }
+
+  .captured-piece {
+    font-size: 1.1rem;
   }
 
   .move-list {

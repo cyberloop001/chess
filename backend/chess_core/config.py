@@ -21,7 +21,7 @@ class ModelConfig:
 
 @dataclass
 class MCTSConfig:
-    simulations: int = 96
+    simulations: int = 256
     c_puct: float = 1.5
     dirichlet_alpha: float = 0.3
     dirichlet_epsilon: float = 0.25
