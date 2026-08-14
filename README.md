@@ -56,11 +56,12 @@ cd frontend
 npm run dev
 ```
 
-Open http://127.0.0.1:8080 and click **Start duel**.
+Open http://127.0.0.1:8080 — **Arena** (model vs model), **Human** (you vs a model), or **Analytics**.
 
 ## Notes
 
-- **Arena:** White = MLP, Black = Transformer. One game per Start; shows win / loss / draw, then both nets self-train.
-- After each game, **both** models train on **all plies** (not only their own moves), then save to `weights/mlp.pt` / `weights/transformer.pt`.
+- **Arena:** White = MLP, Black = Transformer. Set **Train count**, then each cycle is duel → train → next game.
+- **Human:** Play as White or Black vs MLP or Transformer. Legal moves highlight on click; the opponent model trains after the game.
+- After each game, models train on the trajectory (plus a replay buffer) and save to `weights/mlp.pt` / `weights/transformer.pt`.
 - **Analytics** are saved on the server in `data/match_history.json` (API: `/api/analytics/matches`).
 - Self-play stub: `python -m backend.training.self_play --model mlp --simulations 64`

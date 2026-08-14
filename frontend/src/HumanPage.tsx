@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Chess } from "chess.js";
 import { ChessBoard } from "./ChessBoard";
+import { explainSan } from "./moveExplain";
 import {
   modelLabel,
   type MatchEvent,
@@ -58,6 +60,12 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
   const [thinkingSide, setThinkingSide] = useState<"white" | "black" | null>(null);
   const [trainReports, setTrainReports] = useState<TrainModelReport[]>([]);
   const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
+  const [hoverTip, setHoverTip] = useState<{
+    x: number;
+    y: number;
+    title: string;
+    lines: string[];
+  } | null>(null);
   const legalMovesRef = useRef<string[]>([]);
   const yourTurnRef = useRef(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -435,13 +443,49 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
         <h2>Moves</h2>
         <ol className="move-list">
           {moves.map((m) => (
-            <li key={m.ply} className="move-item">
+            <li
+              key={m.ply}
+              className="move-item"
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const tipWidth = 280;
+                const x = Math.min(Math.max(8, rect.left), window.innerWidth - tipWidth - 8);
+                const y = rect.bottom + 8;
+                setHoverTip({
+                  x,
+                  y,
+                  title: `Ply ${m.ply} · ${m.san}`,
+                  lines: [
+                    `${m.side === "white" ? "White" : "Black"} · ${
+                      m.model === "human" ? "You" : modelLabel(m.model)
+                    }`,
+                    `Played ${m.san} (${m.uci})`,
+                    explainSan(m.san, m.uci),
+                  ],
+                });
+              }}
+              onMouseLeave={() => setHoverTip(null)}
+            >
               <span>{m.ply}.</span>
               <span className="san">{m.san}</span>
               <span className="model">{m.model === "human" ? "You" : modelLabel(m.model)}</span>
             </li>
           ))}
         </ol>
+        {hoverTip &&
+          createPortal(
+            <div
+              className="move-tip-float"
+              style={{ left: hoverTip.x, top: hoverTip.y }}
+              role="tooltip"
+            >
+              <strong>{hoverTip.title}</strong>
+              {hoverTip.lines.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>,
+            document.body,
+          )}
       </section>
     </main>
   );

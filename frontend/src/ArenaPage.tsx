@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChessBoard } from "./ChessBoard";
+import { explainSan } from "./moveExplain";
 import {
   modelLabel,
   type MatchEvent,
@@ -51,6 +52,7 @@ function explainMove(m: MoveEvent): { title: string; lines: string[] } {
   const lines = [
     `${side} · ${modelLabel(m.model)}`,
     `Played ${m.san} (${m.uci})`,
+    explainSan(m.san, m.uci),
   ];
   const mcts = m.mcts;
   if (mcts) {
