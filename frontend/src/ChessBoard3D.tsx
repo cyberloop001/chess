@@ -19,7 +19,7 @@ const WHITE = "#f6f1e6";
 const BLACK = "#1e2329";
 const LIGHT_WOOD = "#e8d5ae";
 const DARK_WOOD = "#b07a4a";
-const FRAME = "#3a2718";
+const FRAME = "#c4a574";
 const SEG = 32;
 
 function sqToPos(sq: string): [number, number, number] {
@@ -278,7 +278,7 @@ function BoardScene({
             {isLegal && !piece ? (
               <mesh position={[0, 0.06, 0]}>
                 <cylinderGeometry args={[0.13, 0.13, 0.03, 20]} />
-                <meshStandardMaterial color="#1a7a62" transparent opacity={0.85} />
+                <meshStandardMaterial color="#ff9a3c" transparent opacity={0.85} />
               </mesh>
             ) : null}
             {piece ? (
@@ -297,7 +297,7 @@ export function ChessBoard3D(props: Props) {
   return (
     <div className={`board board-3d ${props.interactive ? "board-interactive" : ""}`} aria-label="3D chess board">
       <Canvas camera={{ position: [0, 8.6, 8.8], fov: 36 }} dpr={[1, 2]} gl={{ antialias: true }}>
-        <color attach="background" args={["#cfdbe8"]} />
+        <color attach="background" args={["#1c2030"]} />
         <hemisphereLight args={["#fff6e8", "#8aa0b5", 0.85]} />
         <directionalLight position={[5, 10, 6]} intensity={1.35} />
         <directionalLight position={[-6, 4, -4]} intensity={0.28} />

@@ -1,16 +1,18 @@
 :root {
-  --ink: #1a2332;
-  --muted: #5a6a7d;
-  --mist: #e7eef6;
-  --mist-2: #d3deea;
-  --board-light: #cfd9e6;
-  --board-dark: #3d6e7a;
-  --accent: #0f7a72;
-  --panel: rgba(246, 249, 252, 0.78);
-  --line: rgba(26, 35, 50, 0.12);
-  --shadow: 0 22px 50px rgba(26, 35, 50, 0.14);
+  --ink: #f4f6fb;
+  --muted: #9aa3b5;
+  --mist: #2a3040;
+  --mist-2: #343b4e;
+  --board-light: #ece6d6;
+  --board-dark: #5c6b78;
+  --accent: #ff9a3c;
+  --accent-2: #7ec8ff;
+  --panel: #2c3142;
+  --line: rgba(255, 255, 255, 0.1);
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
   --font-display: "Syne", "Avenir Next", sans-serif;
   --font-body: "Manrope", "Segoe UI", sans-serif;
+  --bg: #1c2030;
 }
 
 * {
@@ -27,10 +29,8 @@ body {
   margin: 0;
   color: var(--ink);
   font-family: var(--font-body);
-  background:
-    radial-gradient(1000px 620px at 8% -8%, #f4f8fc 0%, transparent 55%),
-    radial-gradient(820px 540px at 100% 8%, #b9d4d1 0%, transparent 48%),
-    linear-gradient(155deg, #eaf1f7 0%, #d9e4ef 48%, #c9d7e4 100%);
+  background: radial-gradient(900px 520px at 8% -10%, #32384c 0%, transparent 55%),
+    radial-gradient(700px 420px at 100% 0%, #3a2e28 0%, transparent 46%), var(--bg);
 }
 
 button,
@@ -54,13 +54,12 @@ button {
 }
 
 .hero {
-  padding: 2.25rem clamp(1.25rem, 4vw, 3.5rem) 1rem;
+  padding: 1.15rem clamp(0.5rem, 1vw, 0.85rem) 0.55rem;
   display: grid;
-  gap: 0.85rem;
-  max-width: 1280px;
+  gap: 0.4rem;
+  max-width: 1920px;
   margin: 0 auto;
   width: 100%;
-  animation: rise 700ms ease-out both;
 }
 
 .hero-top {
@@ -73,10 +72,11 @@ button {
 
 .brand {
   font-family: var(--font-display);
-  font-size: clamp(2.8rem, 7vw, 4.6rem);
+  font-size: clamp(2rem, 4.5vw, 3.1rem);
   line-height: 0.92;
   letter-spacing: -0.04em;
   margin: 0;
+  color: var(--accent);
 }
 
 .nav {
@@ -88,7 +88,8 @@ button {
   border: 1px solid transparent;
   background: transparent;
   color: var(--muted);
-  padding: 0.55rem 0.9rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
   transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
@@ -98,33 +99,33 @@ button {
 
 .nav-link.active {
   color: var(--ink);
-  border-color: var(--line);
-  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 154, 60, 0.45);
+  background: rgba(255, 154, 60, 0.12);
 }
 
 .tagline {
   margin: 0;
-  max-width: 38rem;
+  max-width: 42rem;
   color: var(--muted);
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(220px, 260px);
-  gap: 1.25rem;
-  padding: 0.5rem clamp(1rem, 3vw, 2.5rem) 2.5rem;
-  max-width: 1280px;
+  grid-template-columns: minmax(270px, 290px) minmax(0, 1fr) minmax(270px, 300px);
+  gap: 0.65rem;
+  padding: 0.35rem clamp(0.45rem, 1vw, 0.75rem) 1.4rem;
+  max-width: 1920px;
   margin: 0 auto;
   width: 100%;
-  align-items: start;
+  align-items: stretch;
 }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  backdrop-filter: blur(10px);
-  padding: 1.1rem 1.15rem 1.25rem;
+  border-radius: 16px;
+  padding: 0.95rem 0.95rem 1.05rem;
   box-shadow: var(--shadow);
   min-width: 0;
   overflow: visible;
@@ -135,9 +136,10 @@ button {
 
 .panel h2 {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   margin: 0 0 0.85rem;
   font-weight: 700;
+  color: var(--accent);
 }
 
 .field {
@@ -165,10 +167,10 @@ button {
 }
 
 .pairing-label {
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--accent);
 }
 
 .pairing strong {
@@ -186,10 +188,10 @@ button {
 .field select {
   width: 100%;
   max-width: 12rem;
-  padding: 0.45rem 0.6rem;
+  padding: 0.5rem 0.65rem;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel-2, rgba(255, 255, 255, 0.65));
+  border-radius: 10px;
+  background: #232838;
   color: var(--ink);
   font: inherit;
 }
@@ -260,6 +262,7 @@ button {
   margin-top: 1rem;
   padding: 0.85rem 0.95rem;
   border: 1px solid var(--line);
+  border-radius: 12px;
   display: grid;
   gap: 0.3rem;
   position: relative;
@@ -286,15 +289,15 @@ button {
 }
 
 .result-mlp {
-  background: rgba(26, 35, 50, 0.08);
+  background: rgba(255, 154, 60, 0.12);
 }
 
 .result-transformer {
-  background: rgba(15, 122, 114, 0.12);
+  background: rgba(126, 200, 255, 0.12);
 }
 
 .result-draw {
-  background: rgba(90, 106, 125, 0.12);
+  background: rgba(154, 163, 181, 0.12);
 }
 
 .field label {
@@ -307,20 +310,24 @@ button {
 .field select,
 .field input {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  background: #232838;
   padding: 0.65rem 0.75rem;
   color: var(--ink);
+  border-radius: 10px;
 }
 
 .actions {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
   margin-top: 0.4rem;
+  flex-wrap: nowrap;
 }
 
 .btn {
   border: 0;
-  padding: 0.75rem 1rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  white-space: nowrap;
   transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
 }
 
@@ -334,9 +341,10 @@ button {
 }
 
 .btn-primary {
-  background: var(--ink);
-  color: #f3f7fb;
+  background: var(--accent);
+  color: #1c140c;
   flex: 1;
+  font-weight: 700;
 }
 
 .btn-ghost {
@@ -378,20 +386,20 @@ button {
 
 .board-wrap {
   display: grid;
-  gap: 0.85rem;
-  justify-items: center;
+  gap: 0.7rem;
+  justify-items: stretch;
   animation: rise 900ms ease-out both;
   min-width: 0;
   width: 100%;
 }
 
 .board-row {
-  --board-size: min(100%, 520px, 70vh);
+  --board-size: min(100%, 82vh);
   display: grid;
-  grid-template-columns: minmax(48px, 72px) var(--board-size) minmax(48px, 72px);
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
   align-items: stretch;
   justify-content: center;
-  gap: 0.55rem;
+  gap: 0.4rem;
   width: 100%;
 }
 
@@ -401,10 +409,11 @@ button {
   align-items: center;
   gap: 0.4rem;
   min-width: 0;
-  padding: 0.45rem 0.25rem;
+  padding: 0.45rem 0.15rem;
   background: var(--panel);
   border: 1px solid var(--line);
-  box-shadow: var(--shadow);
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 .captured-list {
@@ -437,11 +446,12 @@ button {
 }
 
 .captured-piece[data-color="b"] {
-  color: #15202b;
+  color: #c5c8ce;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .players {
-  width: min(100%, 520px);
+  width: 100%;
   display: flex;
   justify-content: space-between;
   gap: 1rem;
@@ -467,13 +477,15 @@ button {
 }
 
 .board {
-  width: var(--board-size);
-  height: var(--board-size);
+  width: 100%;
+  height: auto;
   aspect-ratio: 1 / 1;
+  max-height: 82vh;
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   grid-template-rows: repeat(8, minmax(0, 1fr));
-  border: 10px solid #243744;
+  border: 10px solid #1a1e28;
+  border-radius: 14px;
   box-shadow: var(--shadow);
   overflow: hidden;
   container-type: size;
@@ -483,7 +495,11 @@ button {
   display: block;
   padding: 0;
   overflow: hidden;
-  background: #d9e4ef;
+  background: #252a38;
+  height: min(82vh, 100%);
+  max-height: 82vh;
+  aspect-ratio: 1 / 1;
+  width: 100%;
 }
 
 .board-3d canvas {
@@ -547,7 +563,7 @@ button {
 
 .square.last-from,
 .square.last-to {
-  box-shadow: inset 0 0 0 3px rgba(15, 122, 114, 0.9);
+  box-shadow: inset 0 0 0 3px rgba(255, 154, 60, 0.9);
 }
 
 .square.selected {
@@ -580,7 +596,7 @@ button {
   width: 28%;
   height: 28%;
   border-radius: 50%;
-  background: rgba(15, 122, 114, 0.55);
+  background: rgba(255, 154, 60, 0.55);
   pointer-events: none;
   z-index: 2;
 }
@@ -617,7 +633,7 @@ button {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: min(420px, 55vh);
+  max-height: min(58vh, 640px);
   overflow: auto;
   display: grid;
   gap: 0.35rem;
@@ -635,7 +651,7 @@ button {
 }
 
 .move-item:hover {
-  background: rgba(15, 122, 114, 0.08);
+  background: rgba(255, 154, 60, 0.1);
 }
 
 .move-list .san {
@@ -687,9 +703,15 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .board,
+  .board-3d {
+    max-height: 62vh;
+    height: auto;
+  }
+
   .board-row {
-    --board-size: min(100%, 520px, 62vh);
-    grid-template-columns: 40px var(--board-size) 40px;
+    --board-size: min(100%, 62vh);
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
     gap: 0.3rem;
   }
 
@@ -728,8 +750,8 @@ button {
 .analytics {
   display: grid;
   gap: 1.1rem;
-  padding: 0.5rem clamp(1rem, 3vw, 2.5rem) 2.5rem;
-  max-width: 1280px;
+  padding: 0.5rem clamp(0.6rem, 1.4vw, 1.1rem) 2.5rem;
+  max-width: 1920px;
   margin: 0 auto;
   width: 100%;
 }
@@ -746,6 +768,7 @@ button {
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 4vw, 2.4rem);
   margin: 0 0 0.35rem;
+  color: var(--accent);
 }
 
 .analytics-sub {
@@ -777,6 +800,7 @@ button {
 .stat {
   background: var(--panel);
   border: 1px solid var(--line);
+  border-radius: 16px;
   padding: 1rem 1.1rem;
   box-shadow: var(--shadow);
   display: grid;
@@ -818,13 +842,15 @@ button {
   margin: 0 0 0.65rem;
   font-family: var(--font-display);
   font-size: 1.15rem;
+  color: var(--accent);
 }
 
 .chart {
   width: 100%;
   height: auto;
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.22);
   border: 1px solid var(--line);
+  border-radius: 10px;
 }
 
 .chart-zero {
@@ -860,16 +886,17 @@ button {
   width: 100%;
   overflow: hidden;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
 }
 
 .bar-left {
-  background: #1a2332;
+  background: var(--accent);
   min-width: 0;
 }
 
 .bar-right {
-  background: #0f7a72;
+  background: var(--accent-2);
   min-width: 0;
 }
 
@@ -941,7 +968,7 @@ button {
 
 .match-table tbody tr:hover,
 .match-table tbody tr.selected {
-  background: rgba(15, 122, 114, 0.1);
+  background: rgba(255, 154, 60, 0.12);
 }
 
 @media (max-width: 1100px) {
