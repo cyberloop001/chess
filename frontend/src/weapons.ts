@@ -26,13 +26,24 @@ type ArsenalId = "kingdom" | "sun" | "empire";
 type Faction = "w" | "b";
 type PieceKind = "k" | "q" | "b" | "n" | "r" | "p";
 
-function armSculpt(_id: WeaponId): null {
+type ArmSculpt = {
+  grip: number;
+  muzzle: number | null;
+};
+
+type ArmSculptInstance = {
+  group: THREE.Group;
+  meshes: THREE.Mesh[];
+  materials: THREE.MeshStandardMaterial[];
+};
+
+function armSculpt(_id: WeaponId): ArmSculpt | null {
   return null;
 }
 function hasArmSculpt(_id: WeaponId): boolean {
   return false;
 }
-function instanceArmSculpt(_id: WeaponId, _color: Faction): null {
+function instanceArmSculpt(_id: WeaponId, _color: Faction): ArmSculptInstance | null {
   return null;
 }
 function warmArmSculpt(_id: WeaponId): Promise<void> {
