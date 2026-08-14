@@ -135,8 +135,8 @@ function selectedValueSeries(match: StoredMatch | null) {
     if (key.includes("transformer")) transformer.push(move.rootValue);
   }
   return [
-    { label: "MLP root value", color: "#1a2332", points: mlp },
-    { label: "Transformer root value", color: "#0f7a72", points: transformer },
+    { label: "MLP root value", color: "#ff9a3c", points: mlp },
+    { label: "Transformer root value", color: "#7ec8ff", points: transformer },
   ];
 }
 
@@ -151,8 +151,8 @@ function selectedConfidenceSeries(match: StoredMatch | null) {
     if (key.includes("transformer")) transformer.push(conf);
   }
   return [
-    { label: "MLP top-visit share", color: "#1a2332", points: mlp },
-    { label: "Transformer top-visit share", color: "#0f7a72", points: transformer },
+    { label: "MLP top-visit share", color: "#ff9a3c", points: mlp },
+    { label: "Transformer top-visit share", color: "#7ec8ff", points: transformer },
   ];
 }
 
