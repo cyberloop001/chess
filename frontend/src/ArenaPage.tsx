@@ -82,6 +82,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   const [training, setTraining] = useState(false);
   const [thinkingSide, setThinkingSide] = useState<"white" | "black" | null>(null);
   const [lastUci, setLastUci] = useState<string | null>(null);
+  const [view3d, setView3d] = useState(true);
   const [latestMcts, setLatestMcts] = useState<MoveEvent["mcts"] | null>(null);
   const [trainReports, setTrainReports] = useState<TrainModelReport[]>([]);
   const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
@@ -437,12 +438,19 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
             <span>White</span>
             <strong>{modelLabel(whiteModel)}</strong>
           </div>
+          <button
+            type="button"
+            className="btn btn-ghost view-toggle"
+            onClick={() => setView3d((v) => !v)}
+          >
+            {view3d ? "2D board" : "3D board"}
+          </button>
           <div className={`player ${thinkingSide === "black" ? "active" : ""}`}>
             <span>Black</span>
             <strong>{modelLabel(blackModel)}</strong>
           </div>
         </div>
-        <ChessBoard fen={fen} lastUci={lastUci} />
+        <ChessBoard fen={fen} lastUci={lastUci} view3d={view3d} />
       </section>
 
       <section className="panel">

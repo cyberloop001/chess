@@ -1,4 +1,5 @@
 import { Chess } from "chess.js";
+import { ChessBoard3D } from "./ChessBoard3D";
 
 const PIECES: Record<string, string> = {
   wK: "♔",
@@ -84,6 +85,7 @@ type Props = {
   legalTargets?: string[];
   interactive?: boolean;
   orientation?: "white" | "black";
+  view3d?: boolean;
   onSquareClick?: (square: string) => void;
 };
 
@@ -94,6 +96,7 @@ export function ChessBoard({
   legalTargets = [],
   interactive = false,
   orientation = "white",
+  view3d = false,
   onSquareClick,
 }: Props) {
   const chess = new Chess(fen);
@@ -113,6 +116,17 @@ export function ChessBoard({
   return (
     <div className="board-row">
       <CapturedTray label={leftLabel} pieces={leftPieces} side="left" />
+      {view3d ? (
+        <ChessBoard3D
+          fen={fen}
+          lastUci={lastUci}
+          selected={selected}
+          legalTargets={legalTargets}
+          interactive={interactive}
+          orientation={orientation}
+          onSquareClick={onSquareClick}
+        />
+      ) : (
       <div className={`board ${interactive ? "board-interactive" : ""}`} aria-label="Chess board">
       {rows.map((row, rankIdx) => {
         const displayRow = flipped ? [...row].reverse() : row;
@@ -163,6 +177,7 @@ export function ChessBoard({
         });
       })}
       </div>
+      )}
       <CapturedTray label={rightLabel} pieces={rightPieces} side="right" />
     </div>
   );

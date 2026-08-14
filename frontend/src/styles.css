@@ -479,6 +479,26 @@ button {
   container-type: size;
 }
 
+.board-3d {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  background: #d9e4ef;
+}
+
+.board-3d canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.view-toggle {
+  align-self: center;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 .square {
   display: grid;
   place-items: center;
