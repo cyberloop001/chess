@@ -364,8 +364,8 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
             disabled={busy}
             onChange={(e) => setHumanColor(e.target.value as "white" | "black")}
           >
-            <option value="white">White</option>
-            <option value="black">Black</option>
+            <option value="white">Ivory Kingdom</option>
+            <option value="black">Sun Empire</option>
           </select>
         </label>
         <label className="field">
@@ -421,7 +421,7 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
       <section className="board-wrap">
         <div className="players">
           <div className={`player ${thinkingSide === "white" || (yourTurn && humanColor === "white") ? "active" : ""}`}>
-            <span>White</span>
+            <span className="side-white">Ivory Kingdom</span>
             <strong>{humanColor === "white" ? "You" : modelLabel(opponent)}</strong>
           </div>
           <button
@@ -432,7 +432,7 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
             {view3d ? "2D board" : "3D board"}
           </button>
           <div className={`player ${thinkingSide === "black" || (yourTurn && humanColor === "black") ? "active" : ""}`}>
-            <span>Black</span>
+            <span className="side-black">Sun Empire</span>
             <strong>{humanColor === "black" ? "You" : modelLabel(opponent)}</strong>
           </div>
         </div>
@@ -465,7 +465,7 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
                   y,
                   title: `Ply ${m.ply} · ${m.san}`,
                   lines: [
-                    `${m.side === "white" ? "White" : "Black"} · ${
+                    `${m.side === "white" ? "Ivory Kingdom" : "Sun Empire"} · ${
                       m.model === "human" ? "You" : modelLabel(m.model)
                     }`,
                     `Played ${m.san} (${m.uci})`,

@@ -48,7 +48,7 @@ function formatResult(final: FinalResult): string {
 }
 
 function explainMove(m: MoveEvent): { title: string; lines: string[] } {
-  const side = m.side === "white" ? "White" : "Black";
+  const side = m.side === "white" ? "Ivory Kingdom" : "Sun Empire";
   const lines = [
     `${side} · ${modelLabel(m.model)}`,
     `Played ${m.san} (${m.uci})`,
@@ -179,8 +179,8 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         setRunningState(true);
         setStatus(
           total > 1
-            ? `Game ${idx} of ${total} · ${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`
-            : `${modelLabel(event.white)} (White) vs ${modelLabel(event.black)} (Black)`,
+            ? `Game ${idx} of ${total} · ${modelLabel(event.white)} (Ivory Kingdom) vs ${modelLabel(event.black)} (Sun Empire)`
+            : `${modelLabel(event.white)} (Ivory Kingdom) vs ${modelLabel(event.black)} (Sun Empire)`,
         );
         break;
       }
@@ -342,11 +342,11 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
         <h2>Match setup</h2>
         <div className="pairing">
           <div>
-            <span className="pairing-label">White</span>
+            <span className="pairing-label side-white">Ivory Kingdom</span>
             <strong>{modelLabel(whiteModel)}</strong>
           </div>
           <div>
-            <span className="pairing-label">Black</span>
+            <span className="pairing-label side-black">Sun Empire</span>
             <strong>{modelLabel(blackModel)}</strong>
           </div>
         </div>
@@ -435,7 +435,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
       <section className="board-wrap">
         <div className="players">
           <div className={`player ${thinkingSide === "white" ? "active" : ""}`}>
-            <span>White</span>
+            <span className="side-white">Ivory Kingdom</span>
             <strong>{modelLabel(whiteModel)}</strong>
           </div>
           <button
@@ -446,7 +446,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
             {view3d ? "2D board" : "3D board"}
           </button>
           <div className={`player ${thinkingSide === "black" ? "active" : ""}`}>
-            <span>Black</span>
+            <span className="side-black">Sun Empire</span>
             <strong>{modelLabel(blackModel)}</strong>
           </div>
         </div>
