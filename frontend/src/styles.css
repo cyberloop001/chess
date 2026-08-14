@@ -173,6 +173,20 @@ button {
   color: var(--accent);
 }
 
+.side-white {
+  color: #f3e4c4;
+}
+
+.side-black {
+  color: #e08a4a;
+}
+
+.player span {
+  font-size: 0.74rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .pairing strong {
   font-family: var(--font-display);
   font-size: 1.05rem;
@@ -472,6 +486,8 @@ button {
   white-space: nowrap;
 }
 
+.player.active .side-white,
+.player.active .side-black,
 .player.active strong {
   color: var(--accent);
 }

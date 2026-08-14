@@ -265,8 +265,8 @@ export function AnalyticsPage({ matches, onClear, onRefresh }: Props) {
                   <thead>
                     <tr>
                       <th>When</th>
-                      <th>White</th>
-                      <th>Black</th>
+                      <th>Ivory</th>
+                      <th>Sun</th>
                       <th>Result</th>
                       <th>Plies</th>
                       <th>Sims</th>

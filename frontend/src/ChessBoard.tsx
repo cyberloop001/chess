@@ -110,8 +110,8 @@ export function ChessBoard({
   const captured = capturedFromFen(fen);
   const leftPieces = flipped ? captured.white : captured.black;
   const rightPieces = flipped ? captured.black : captured.white;
-  const leftLabel = flipped ? "White captured" : "Black captured";
-  const rightLabel = flipped ? "Black captured" : "White captured";
+  const leftLabel = flipped ? "Ivory captured" : "Sun captured";
+  const rightLabel = flipped ? "Sun captured" : "Ivory captured";
 
   return (
     <div className="board-row">
