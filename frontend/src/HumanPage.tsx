@@ -57,6 +57,7 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
   const [legalMoves, setLegalMoves] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [lastUci, setLastUci] = useState<string | null>(null);
+  const [view3d, setView3d] = useState(true);
   const [thinkingSide, setThinkingSide] = useState<"white" | "black" | null>(null);
   const [trainReports, setTrainReports] = useState<TrainModelReport[]>([]);
   const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
@@ -423,6 +424,13 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
             <span>White</span>
             <strong>{humanColor === "white" ? "You" : modelLabel(opponent)}</strong>
           </div>
+          <button
+            type="button"
+            className="btn btn-ghost view-toggle"
+            onClick={() => setView3d((v) => !v)}
+          >
+            {view3d ? "2D board" : "3D board"}
+          </button>
           <div className={`player ${thinkingSide === "black" || (yourTurn && humanColor === "black") ? "active" : ""}`}>
             <span>Black</span>
             <strong>{humanColor === "black" ? "You" : modelLabel(opponent)}</strong>
@@ -435,6 +443,7 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
           legalTargets={legalTargets}
           interactive={yourTurn && !training}
           orientation={humanColor}
+          view3d={view3d}
           onSquareClick={onSquareClick}
         />
       </section>
