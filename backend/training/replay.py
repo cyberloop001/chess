@@ -141,12 +141,15 @@ class ReplayBuffer:
             print(f"Could not save replay buffer: {exc}")
 
 
-# Shared process-wide buffer (Arena + Human both contribute)
-_shared: ReplayBuffer | None = None
+# Process-wide buffers, one file per architecture so MLP MCTS targets
+# never enter the Transformer's replay (and the reverse).
+_buffers: dict[str, ReplayBuffer] = {}
 
 
-def get_replay_buffer() -> ReplayBuffer:
-    global _shared
-    if _shared is None:
-        _shared = ReplayBuffer()
-    return _shared
+def get_replay_buffer(model_id: str) -> ReplayBuffer:
+    key = (model_id or "shared").lower().strip()
+    buf = _buffers.get(key)
+    if buf is None:
+        buf = ReplayBuffer(path=DATA_DIR / f"replay_buffer_{key}.npz")
+        _buffers[key] = buf
+    return buf

@@ -35,6 +35,10 @@ class TrainConfig:
     lr: float = 5e-4
     replay_max_samples: int = 40_000
     replay_batch_max: int = 2048
+    # Self-play: claim draws, then a high ply ceiling (not the old 80-full-move cut).
+    self_play_max_plies: int = 512
+    self_play_resign_threshold: float = 0.92
+    self_play_resign_plies: int = 8
 
 
 @dataclass

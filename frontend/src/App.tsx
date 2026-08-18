@@ -33,7 +33,7 @@ export default function App() {
       ? "Watch MLP+MCTS and Transformer+MCTS duel under a shared AlphaZero-style search."
       : page === "human"
         ? "Play against a model. After the game, it trains from the result."
-        : "Compare model outcomes, search confidence, and value trajectories across duels.";
+        : "Self-play progress, loss improvement, and head-to-head duel analytics.";
 
   return (
     <div className="app">

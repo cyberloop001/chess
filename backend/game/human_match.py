@@ -329,9 +329,10 @@ class HumanMatchEngine:
         steps: list[dict[str, Any]],
     ) -> dict[str, Any]:
         train_cfg = self.config.train
-        buffer = get_replay_buffer()
+        buffer = get_replay_buffer(model_id)
+        own_steps = [s for s in steps if s.get("model") == model_id]
         train_steps = buffer.prepare_training_batch(
-            steps,
+            own_steps,
             max_total=train_cfg.replay_batch_max,
         )
         report = train_from_samples(
@@ -346,7 +347,7 @@ class HumanMatchEngine:
         )
         info = asdict(report)
         info["replay_size"] = len(buffer)
-        info["game_samples"] = len(steps)
+        info["game_samples"] = len(own_steps)
         return {"models": [info], "replay_size": len(buffer)}
 
 

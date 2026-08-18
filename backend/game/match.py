@@ -358,13 +358,14 @@ class MatchEngine:
     ) -> dict[str, Any]:
         # Train each architecture on latest game + replay buffer mix
         steps: list[dict[str, Any]] = outcome.get("train_steps") or []
-        buffer = get_replay_buffer()
-        train_steps = buffer.prepare_training_batch(
-            steps,
-            max_total=series.replay_batch_max,
-        )
         reports = []
         for model_id in (MLP_ID, TRANSFORMER_ID):
+            own_steps = [s for s in steps if s.get("model") == model_id]
+            buffer = get_replay_buffer(model_id)
+            train_steps = buffer.prepare_training_batch(
+                own_steps,
+                max_total=series.replay_batch_max,
+            )
             report = train_from_samples(
                 nets[model_id],
                 train_steps,
@@ -377,9 +378,12 @@ class MatchEngine:
             )
             info = asdict(report)
             info["replay_size"] = len(buffer)
-            info["game_samples"] = len(steps)
+            info["game_samples"] = len(own_steps)
             reports.append(info)
-        return {"models": reports, "replay_size": len(buffer)}
+        return {
+            "models": reports,
+            "replay_size": {r["model"]: r["replay_size"] for r in reports},
+        }
 
 
 def _resolve_sides(white_model: str | None, black_model: str | None) -> tuple[str, str]:
