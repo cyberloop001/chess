@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { wsUrl as matchSocketUrl } from "./api";
 import { ChessBoard } from "./ChessBoard";
 import { explainSan } from "./moveExplain";
 import {
@@ -101,8 +102,7 @@ export function ArenaPage({ onHistoryChange, onRunningChange }: Props) {
   onRunningChangeRef.current = onRunningChange;
 
   const wsUrl = useMemo(() => {
-    const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${proto}://${window.location.host}/ws/match`;
+    return matchSocketUrl("/ws/match");
   }, []);
 
   useEffect(() => {

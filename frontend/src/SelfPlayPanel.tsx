@@ -5,6 +5,7 @@ import {
   fetchSelfPlayHistory,
   improvementFor,
 } from "./selfPlayHistory";
+import { wsUrl as selfPlaySocketUrl } from "./api";
 import { shortModel, type ModelId, type SelfPlayEvent, type SelfPlayRecord } from "./types";
 
 function formatWhen(iso: string): string {
@@ -104,10 +105,7 @@ export function SelfPlayPanel({ live: liveProp }: Props) {
   const [busy, setBusy] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
-  const wsUrl = useMemo(() => {
-    const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${proto}://${window.location.host}/ws/selfplay`;
-  }, []);
+  const wsUrl = useMemo(() => selfPlaySocketUrl("/ws/selfplay"), []);
 
   const refresh = async () => {
     const next = await fetchSelfPlayHistory();
@@ -191,7 +189,7 @@ export function SelfPlayPanel({ live: liveProp }: Props) {
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     ws.onopen = () => {
-      ws.send(JSON.stringify({ action: "start", model, games: gameCount }));
+      ws.send(JSON.stringify({ action: "start", model, games: gameCount, simulations: 256 }));
     };
     ws.onmessage = (msg) => {
       try {

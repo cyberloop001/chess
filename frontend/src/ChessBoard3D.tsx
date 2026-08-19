@@ -6,6 +6,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { attachWeapons } from "./weapons";
+import { assetUrl } from "./api";
 
 type Props = {
   fen: string;
@@ -24,20 +25,20 @@ const FRAME_EDGE = "#14161c";
 
 const PIECE_FILE: Record<"w" | "b", Record<string, string>> = {
   w: {
-    p: "/pieces/medieval/ivory/p.glb",
-    r: "/pieces/medieval/ivory/r.glb",
-    n: "/pieces/medieval/ivory/n.glb",
-    b: "/pieces/medieval/ivory/b.glb",
-    q: "/pieces/medieval/ivory/q.glb",
-    k: "/pieces/medieval/ivory/k.glb",
+    p: assetUrl("pieces/medieval/ivory/p.glb"),
+    r: assetUrl("pieces/medieval/ivory/r.glb"),
+    n: assetUrl("pieces/medieval/ivory/n.glb"),
+    b: assetUrl("pieces/medieval/ivory/b.glb"),
+    q: assetUrl("pieces/medieval/ivory/q.glb"),
+    k: assetUrl("pieces/medieval/ivory/k.glb"),
   },
   b: {
-    p: "/pieces/medieval/sun/p.glb",
-    r: "/pieces/medieval/sun/r.glb",
-    n: "/pieces/medieval/sun/n.glb",
-    b: "/pieces/medieval/sun/b.glb",
-    q: "/pieces/medieval/sun/q.glb",
-    k: "/pieces/medieval/sun/k.glb",
+    p: assetUrl("pieces/medieval/sun/p.glb"),
+    r: assetUrl("pieces/medieval/sun/r.glb"),
+    n: assetUrl("pieces/medieval/sun/n.glb"),
+    b: assetUrl("pieces/medieval/sun/b.glb"),
+    q: assetUrl("pieces/medieval/sun/q.glb"),
+    k: assetUrl("pieces/medieval/sun/k.glb"),
   },
 };
 

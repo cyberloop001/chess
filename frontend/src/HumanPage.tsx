@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Chess } from "chess.js";
+import { wsUrl as humanSocketUrl } from "./api";
 import { ChessBoard } from "./ChessBoard";
 import { explainSan } from "./moveExplain";
 import {
@@ -73,10 +74,7 @@ export function HumanPage({ onHistoryChange, onRunningChange }: Props) {
   const onRunningChangeRef = useRef(onRunningChange);
   onRunningChangeRef.current = onRunningChange;
 
-  const wsUrl = useMemo(() => {
-    const proto = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${proto}://${window.location.host}/ws/human`;
-  }, []);
+  const wsUrl = useMemo(() => humanSocketUrl("/ws/human"), []);
 
   const busy = running || training;
 
