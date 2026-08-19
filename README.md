@@ -58,6 +58,60 @@ npm run dev
 
 Open http://127.0.0.1:8080 — **Arena** (model vs model), **Human** (you vs a model), or **Analytics**.
 
+## Deploy to GitHub Pages
+
+GitHub Pages hosts the **React UI only**. MCTS, training, and WebSockets need a separate Python API (Render, Railway, Fly.io, a VPS, etc.).
+
+### 1. Enable Pages on GitHub
+
+1. Push this repo to GitHub (e.g. `cyberloop001/chess`).
+2. **Settings → Pages → Build and deployment**
+   - Source: **GitHub Actions** (not “Deploy from a branch”)
+   - Save. Until this is set, `deploy-pages` fails with **404 Not Found**.
+3. After enabling Pages, re-run **Actions → Deploy frontend to GitHub Pages** (or push again). The first deploy after enabling Pages should succeed.
+4. Your site URL will be:
+   - `https://<user>.github.io/<repo>/` (project site)
+   - Example: `https://cyberloop001.github.io/chess/`
+
+### 2. Deploy the API (required for Arena / Human / self-play)
+
+Run FastAPI somewhere with HTTPS and WebSocket support, for example:
+
+```bash
+pip install -r requirements.txt
+uvicorn backend.api.main:app --host 0.0.0.0 --port 8000
+```
+
+Copy `weights/*.pt` and optionally `data/` to that server if you want trained models.
+
+CORS is already open (`allow_origins=["*"]`) so the Pages site can call the API.
+
+### 3. Point the frontend at your API
+
+In the GitHub repo: **Settings → Secrets and variables → Actions → Variables**
+
+| Variable | Example |
+|----------|---------|
+| `VITE_API_URL` | `https://your-api.onrender.com` |
+
+Rebuild by pushing to `main`/`dev` or re-running the Pages workflow. The build bakes this URL into the static JS.
+
+Without `VITE_API_URL`, the UI loads on GitHub Pages but **duels and training will fail** (no backend on `github.io`).
+
+### 4. Local production preview
+
+```bash
+cd frontend
+npm run build
+npm run preview
+```
+
+To mimic Pages + remote API:
+
+```bash
+VITE_API_URL=https://your-api.onrender.com npm run build
+```
+
 ## Notes
 
 - **Arena:** White = MLP, Black = Transformer. Set **Train count**, then each cycle is duel → train → next game.

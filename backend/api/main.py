@@ -178,10 +178,13 @@ async def selfplay_socket(ws: WebSocket) -> None:
                 except (TypeError, ValueError):
                     games = 4
                 try:
-                    simulations = max(8, min(int(payload.get("simulations") or 0), 1024))
+                    raw_sims = payload.get("simulations")
+                    simulations = (
+                        MCTSConfig().simulations
+                        if raw_sims in (None, "", 0, "0")
+                        else max(8, min(int(raw_sims), 1024))
+                    )
                 except (TypeError, ValueError):
-                    simulations = 0
-                if simulations <= 0:
                     simulations = MCTSConfig().simulations
                 cancel_event.clear()
                 play_task = asyncio.create_task(run_play(model, games, simulations))

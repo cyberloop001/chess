@@ -1,7 +1,8 @@
+import { apiUrl } from "./api";
 import type { MoveEvent, StoredMatch } from "./types";
 
 export async function fetchMatchHistory(): Promise<StoredMatch[]> {
-  const res = await fetch("/api/analytics/matches");
+  const res = await fetch(apiUrl("/api/analytics/matches"));
   if (!res.ok) {
     throw new Error(`Failed to load analytics (${res.status})`);
   }
@@ -10,7 +11,7 @@ export async function fetchMatchHistory(): Promise<StoredMatch[]> {
 }
 
 export async function clearMatchHistoryRemote(): Promise<void> {
-  const res = await fetch("/api/analytics/matches", { method: "DELETE" });
+  const res = await fetch(apiUrl("/api/analytics/matches"), { method: "DELETE" });
   if (!res.ok) {
     throw new Error(`Failed to clear analytics (${res.status})`);
   }

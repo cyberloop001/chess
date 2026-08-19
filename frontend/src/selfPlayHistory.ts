@@ -1,7 +1,8 @@
+import { apiUrl } from "./api";
 import type { SelfPlayRecord } from "./types";
 
 export async function fetchSelfPlayHistory(): Promise<SelfPlayRecord[]> {
-  const res = await fetch("/api/analytics/selfplay");
+  const res = await fetch(apiUrl("/api/analytics/selfplay"));
   if (!res.ok) {
     throw new Error(`Failed to load self-play history (${res.status})`);
   }
@@ -10,7 +11,7 @@ export async function fetchSelfPlayHistory(): Promise<SelfPlayRecord[]> {
 }
 
 export async function clearSelfPlayHistoryRemote(): Promise<void> {
-  const res = await fetch("/api/analytics/selfplay", { method: "DELETE" });
+  const res = await fetch(apiUrl("/api/analytics/selfplay"), { method: "DELETE" });
   if (!res.ok) {
     throw new Error(`Failed to clear self-play history (${res.status})`);
   }
