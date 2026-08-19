@@ -120,6 +120,52 @@ export type MatchEvent =
   | { type: "info"; message: string }
   | { type: "pong" };
 
+export type SelfPlayRecord = {
+  id: string;
+  runId: string;
+  playedAt: string;
+  model: string;
+  game: number;
+  gamesInRun: number;
+  simulations: number;
+  plies: number;
+  result: string;
+  termination: string;
+  policyLoss: number;
+  valueLoss: number;
+  totalLoss: number;
+  samples: number;
+  replaySize: number;
+  savedTo: string | null;
+};
+
+export type SelfPlayEvent =
+  | {
+      type: "selfplay_start";
+      run_id: string;
+      model: string;
+      games: number;
+      simulations: number;
+    }
+  | {
+      type: "selfplay_thinking";
+      run_id: string;
+      model: string;
+      game: number;
+      games: number;
+    }
+  | (SelfPlayRecord & { type: "selfplay_game"; games: number })
+  | {
+      type: "selfplay_complete" | "selfplay_cancelled";
+      run_id: string;
+      model: string;
+      game_count: number;
+      games: number;
+    }
+  | { type: "error"; message: string }
+  | { type: "info"; message: string }
+  | { type: "pong" };
+
 export type StoredMatch = {
   id: string;
   playedAt: string;

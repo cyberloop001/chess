@@ -4,6 +4,7 @@ import {
   computeAnalytics,
   type AnalyticsSummary,
 } from "./matchHistory";
+import { SelfPlayPanel } from "./SelfPlayPanel";
 import { modelLabel, shortModel, type StoredMatch } from "./types";
 
 type Props = {
@@ -170,9 +171,11 @@ export function AnalyticsPage({ matches, onClear, onRefresh }: Props) {
 
   return (
     <main className="analytics">
+      <SelfPlayPanel />
+
       <section className="analytics-hero-row">
         <div>
-          <h2 className="analytics-title">Analytics</h2>
+          <h2 className="analytics-title">Duel analytics</h2>
           <p className="analytics-sub">
             Server-saved head-to-head results and MCTS search signals across finished duels.
           </p>

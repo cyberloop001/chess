@@ -24,7 +24,7 @@ backend/
   mcts/         # shared PUCT search
   game/         # match orchestration
   api/          # FastAPI + WebSocket
-  training/     # self-play stub
+  training/     # self-play + trainer + replay
 frontend/       # React match UI (Ply Arena)
 weights/        # optional *.pt checkpoints (mlp.pt / transformer.pt)
 ```
@@ -62,6 +62,6 @@ Open http://127.0.0.1:8080 — **Arena** (model vs model), **Human** (you vs a m
 
 - **Arena:** White = MLP, Black = Transformer. Set **Train count**, then each cycle is duel → train → next game.
 - **Human:** Play as White or Black vs MLP or Transformer. Legal moves highlight on click; the opponent model trains after the game.
-- After each game, models train on the trajectory (plus a replay buffer) and save to `weights/mlp.pt` / `weights/transformer.pt`.
-- **Analytics** are saved on the server in `data/match_history.json` (API: `/api/analytics/matches`).
-- Self-play stub: `python -m backend.training.self_play --model mlp --simulations 64`
+- After each Arena game, each net trains only on **its own moves** (MLP on White plies, Transformer on Black plies) plus its own replay file. Self-play trains one architecture against itself.
+- **Analytics** are saved on the server in `data/match_history.json` (duels) and `data/selfplay_history.json` (self-play). The Analytics page charts self-play loss and improvement with citations.
+- Self-play train (MLP or Transformer): games run until mate, a claimed draw (threefold / 50-move), resign, or 512 plies (then drawn). MCTS simulations default to 256, same as Arena. CLI: `python -m backend.training.self_play --model transformer --games 8`. You can also start a run from the Analytics dashboard.

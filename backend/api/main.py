@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from backend.analytics.selfplay_store import clear_selfplay, load_selfplay
 from backend.analytics.store import append_match, clear_matches, load_matches
-from backend.chess_core.config import GameConfig
+from backend.chess_core.config import GameConfig, MCTSConfig
 from backend.game.human_match import HumanMatchEngine
 from backend.game.match import MatchEngine
+from backend.training.self_play import train_self_play
 
 app = FastAPI(title="Chess AlphaZero Arena", version="0.1.0")
 app.add_middleware(
@@ -118,6 +121,91 @@ def post_match(match: MatchIn) -> dict[str, Any]:
 def delete_matches() -> dict[str, Any]:
     clear_matches()
     return {"ok": True, "count": 0}
+
+
+@app.get("/api/analytics/selfplay")
+def get_selfplay() -> dict[str, Any]:
+    games = load_selfplay()
+    return {"games": games, "count": len(games)}
+
+
+@app.delete("/api/analytics/selfplay")
+def delete_selfplay() -> dict[str, Any]:
+    clear_selfplay()
+    return {"ok": True, "count": 0}
+
+
+@app.websocket("/ws/selfplay")
+async def selfplay_socket(ws: WebSocket) -> None:
+    await ws.accept()
+    cancel_event = threading.Event()
+    play_task: asyncio.Task[Any] | None = None
+    loop = asyncio.get_running_loop()
+
+    async def send(event: dict[str, Any]) -> None:
+        try:
+            await ws.send_json(event)
+        except Exception:
+            pass
+
+    def emit(event: dict[str, Any]) -> None:
+        asyncio.run_coroutine_threadsafe(send(event), loop)
+
+    async def run_play(model: str, games: int, simulations: int) -> None:
+        async with _match_lock:
+            await asyncio.to_thread(
+                train_self_play,
+                model,
+                games=games,
+                simulations=simulations,
+                on_event=emit,
+                cancel_event=cancel_event,
+            )
+
+    try:
+        while True:
+            payload = await ws.receive_json()
+            action = payload.get("action")
+            if action == "start":
+                if (play_task is not None and not play_task.done()) or _match_lock.locked():
+                    await send({"type": "error", "message": "A match or self-play run is already running"})
+                    continue
+                model = str(payload.get("model") or "transformer").lower()
+                if model not in ("mlp", "transformer"):
+                    model = "transformer"
+                try:
+                    games = max(1, min(int(payload.get("games") or 4), 100))
+                except (TypeError, ValueError):
+                    games = 4
+                try:
+                    simulations = max(8, min(int(payload.get("simulations") or 0), 1024))
+                except (TypeError, ValueError):
+                    simulations = 0
+                if simulations <= 0:
+                    simulations = MCTSConfig().simulations
+                cancel_event.clear()
+                play_task = asyncio.create_task(run_play(model, games, simulations))
+
+                def _on_done(task: asyncio.Task[Any]) -> None:
+                    try:
+                        exc = task.exception()
+                    except asyncio.CancelledError:
+                        return
+                    if exc is not None:
+                        asyncio.create_task(send({"type": "error", "message": f"Self-play failed: {exc}"}))
+
+                play_task.add_done_callback(_on_done)
+            elif action == "cancel":
+                cancel_event.set()
+                await send({"type": "info", "message": "Cancel requested — finishes the current game first"})
+            elif action == "ping":
+                await send({"type": "pong"})
+            else:
+                await send({"type": "error", "message": f"Unknown action: {action}"})
+    except WebSocketDisconnect:
+        cancel_event.set()
+        if play_task is not None and not play_task.done():
+            play_task.cancel()
 
 
 @app.websocket("/ws/match")
