@@ -66,8 +66,9 @@ GitHub Pages hosts the **React UI only**. MCTS, training, and WebSockets need a 
 
 1. Push this repo to GitHub (e.g. `cyberloop001/chess`).
 2. **Settings → Pages → Build and deployment**
-   - Source: **GitHub Actions**
-3. After the first push to `main` or `dev`, open the **Actions** tab and confirm **Deploy frontend to GitHub Pages** succeeds.
+   - Source: **GitHub Actions** (not “Deploy from a branch”)
+   - Save. Until this is set, `deploy-pages` fails with **404 Not Found**.
+3. After enabling Pages, re-run **Actions → Deploy frontend to GitHub Pages** (or push again). The first deploy after enabling Pages should succeed.
 4. Your site URL will be:
    - `https://<user>.github.io/<repo>/` (project site)
    - Example: `https://cyberloop001.github.io/chess/`
