@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getApiRoot, setApiRoot } from "./api";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { ArenaPage } from "./ArenaPage";
 import { HumanPage } from "./HumanPage";
@@ -65,6 +66,29 @@ export default function App() {
           </nav>
         </div>
         <p className="tagline">{tagline}</p>
+        <form
+          className="api-bar"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const input = form.elements.namedItem("api") as HTMLInputElement;
+            setApiRoot(input.value);
+            window.location.reload();
+          }}
+        >
+          <label>
+            API
+            <input
+              name="api"
+              type="url"
+              placeholder="https://xxxx.trycloudflare.com"
+              defaultValue={getApiRoot()}
+            />
+          </label>
+          <button type="submit" className="btn btn-ghost">
+            Save
+          </button>
+        </form>
         {historyError && page === "analytics" && (
           <p className="tagline">{historyError}</p>
         )}
