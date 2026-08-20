@@ -107,7 +107,34 @@ button {
   margin: 0;
   max-width: 42rem;
   color: var(--muted);
-  font-size: 0.95rem;
+}
+
+.api-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.api-bar label {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex: 1;
+  min-width: 16rem;
+}
+
+.api-bar input {
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.4rem 0.65rem;
+  width: 100%;
 }
 
 .layout {
