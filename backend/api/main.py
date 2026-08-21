@@ -151,7 +151,7 @@ async def selfplay_socket(ws: WebSocket) -> None:
     def emit(event: dict[str, Any]) -> None:
         asyncio.run_coroutine_threadsafe(send(event), loop)
 
-    async def run_play(model: str, games: int, simulations: int) -> None:
+    async def run_play(model: str, games: int, simulations: int, move_delay_ms: int) -> None:
         async with _match_lock:
             await asyncio.to_thread(
                 train_self_play,
@@ -160,6 +160,7 @@ async def selfplay_socket(ws: WebSocket) -> None:
                 simulations=simulations,
                 on_event=emit,
                 cancel_event=cancel_event,
+                move_delay_ms=move_delay_ms,
             )
 
     try:
@@ -186,8 +187,12 @@ async def selfplay_socket(ws: WebSocket) -> None:
                     )
                 except (TypeError, ValueError):
                     simulations = MCTSConfig().simulations
+                try:
+                    move_delay_ms = max(0, min(int(payload.get("move_delay_ms") or 120), 2000))
+                except (TypeError, ValueError):
+                    move_delay_ms = 120
                 cancel_event.clear()
-                play_task = asyncio.create_task(run_play(model, games, simulations))
+                play_task = asyncio.create_task(run_play(model, games, simulations, move_delay_ms))
 
                 def _on_done(task: asyncio.Task[Any]) -> None:
                     try:

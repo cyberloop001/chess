@@ -153,6 +153,83 @@ export type SelfPlayEvent =
       model: string;
       game: number;
       games: number;
+      fen?: string;
+    }
+  | {
+      type: "selfplay_move";
+      run_id: string;
+      model: string;
+      game: number;
+      games: number;
+      ply: number;
+      side: "white" | "black";
+      uci: string;
+      san: string;
+      fen: string;
+      root_value: number;
+      net_value?: number;
+      move_q?: number;
+      simulations: number;
+    }
+  | {
+      type: "selfplay_training";
+      run_id: string;
+      model: string;
+      game: number;
+      games: number;
+      plies: number;
+      result: string;
+      termination: string;
+      fen?: string;
+    }
+  | {
+      type: "selfplay_train_step";
+      run_id: string;
+      model: string;
+      game: number;
+      games: number;
+      step: number;
+      epoch: number;
+      epochs: number;
+      policy_loss: number;
+      value_loss: number;
+      total_loss: number;
+      grad_norm: number;
+      samples: number;
+    }
+  | {
+      type: "selfplay_weights";
+      run_id: string;
+      model: string;
+      game: number;
+      games: number;
+      steps: number;
+      samples: number;
+      lr: number;
+      epochs: number;
+      layer_deltas: Array<{
+        name: string;
+        short: string;
+        numel: number;
+        mean_abs_delta: number;
+        rms_delta: number;
+        rel_mean: number;
+      }>;
+      weight_hist: {
+        counts: number[];
+        edges: number[];
+        mean_rel: number;
+        median_rel: number;
+        sampled: number;
+      } | null;
+      train_trace: Array<{
+        step: number;
+        epoch: number;
+        policy_loss: number;
+        value_loss: number;
+        total_loss: number;
+        grad_norm: number;
+      }>;
     }
   | (SelfPlayRecord & { type: "selfplay_game"; games: number })
   | {

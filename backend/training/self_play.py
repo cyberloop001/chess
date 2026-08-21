@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
@@ -58,6 +59,8 @@ def self_play_game(
     resign_plies: int | None = None,
     net: AlphaZeroNet | None = None,
     device: torch.device | None = None,
+    on_move: Callable[[dict[str, Any]], None] | None = None,
+    move_delay_ms: int = 0,
 ) -> dict[str, Any]:
     train_cfg = TrainConfig()
     simulations = MCTSConfig().simulations if simulations is None else simulations
@@ -97,6 +100,8 @@ def self_play_game(
             termination = "resign"
             break
 
+        side = "white" if board.turn == chess.WHITE else "black"
+        fen_before = board.fen()
         move, policy, stats = mcts.search(board)
         white_value = stats.root_value if board.turn == chess.WHITE else -stats.root_value
         sign = 0
@@ -110,9 +115,10 @@ def self_play_game(
             streak_sign = sign
             streak = 1 if sign else 0
 
+        san = board.san(move)
         trajectory.append(
             {
-                "fen": board.fen(),
+                "fen": fen_before,
                 "planes": board_to_tensor(board),
                 "policy": policy,
                 "move": move.uci(),
@@ -120,6 +126,24 @@ def self_play_game(
             }
         )
         board.push(move)
+        if on_move is not None:
+            on_move(
+                {
+                    "type": "selfplay_move",
+                    "model": model_name,
+                    "ply": len(trajectory),
+                    "side": side,
+                    "uci": move.uci(),
+                    "san": san,
+                    "fen": board.fen(),
+                    "root_value": float(stats.root_value),
+                    "net_value": float(stats.net_value),
+                    "move_q": float(stats.move_q),
+                    "simulations": simulations,
+                }
+            )
+            if move_delay_ms > 0:
+                time.sleep(move_delay_ms / 1000.0)
 
     z = {WHITE_WIN: 1.0, BLACK_WIN: -1.0}.get(result, 0.0)
     _assign_values(trajectory, z)
@@ -129,6 +153,7 @@ def self_play_game(
         "termination": termination,
         "plies": len(trajectory),
         "model": model_name,
+        "final_fen": board.fen(),
     }
 
 
@@ -141,11 +166,14 @@ def train_self_play(
     save_traj: Path | None = None,
     on_event: Callable[[dict[str, Any]], None] | None = None,
     cancel_event: threading.Event | None = None,
+    move_delay_ms: int | None = None,
 ) -> dict[str, Any]:
     train_cfg = TrainConfig()
     sims = MCTSConfig().simulations if simulations is None else simulations
     total = max(1, games)
     run_id = new_run_id()
+    # Small pause between plies so the UI can show each move (0 = as-fast-as-search).
+    delay_ms = 120 if move_delay_ms is None else max(0, int(move_delay_ms))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     net = _load_network(model_name, device)
     buffer = get_replay_buffer(model_name)
@@ -178,18 +206,65 @@ def train_self_play(
                 "model": model_name,
                 "game": game_idx + 1,
                 "games": total,
+                "fen": chess.Board().fen(),
             }
         )
+
+        def on_move(payload: dict[str, Any]) -> None:
+            payload.update(
+                {
+                    "run_id": run_id,
+                    "game": game_idx + 1,
+                    "games": total,
+                }
+            )
+            emit(payload)
+
         game = self_play_game(
             model_name,
             sims,
             max_plies=max_plies,
             net=net,
             device=device,
+            on_move=on_move,
+            move_delay_ms=delay_ms,
         )
         last_game = game
         steps = game["trajectory"]
+        emit(
+            {
+                "type": "selfplay_training",
+                "run_id": run_id,
+                "model": model_name,
+                "game": game_idx + 1,
+                "games": total,
+                "plies": game["plies"],
+                "result": game["result"],
+                "termination": game["termination"],
+                "fen": game.get("final_fen") or (steps[-1]["fen"] if steps else chess.Board().fen()),
+            }
+        )
         train_steps = buffer.prepare_training_batch(steps, max_total=train_cfg.replay_batch_max)
+
+        def on_train_step(payload: dict[str, Any]) -> None:
+            emit(
+                {
+                    "type": "selfplay_train_step",
+                    "run_id": run_id,
+                    "model": model_name,
+                    "game": game_idx + 1,
+                    "games": total,
+                    "step": int(payload["step"]),
+                    "epoch": int(payload["epoch"]),
+                    "epochs": int(payload["epochs"]),
+                    "policy_loss": payload["policy_loss"],
+                    "value_loss": payload["value_loss"],
+                    "total_loss": payload["total_loss"],
+                    "grad_norm": payload["grad_norm"],
+                    "samples": int(payload["samples"]),
+                }
+            )
+
         report = train_from_samples(
             net,
             train_steps,
@@ -199,6 +274,23 @@ def train_self_play(
             lr=train_cfg.lr,
             device=device,
             save=True,
+            on_step=on_train_step,
+        )
+        emit(
+            {
+                "type": "selfplay_weights",
+                "run_id": run_id,
+                "model": model_name,
+                "game": game_idx + 1,
+                "games": total,
+                "steps": report.steps,
+                "samples": report.samples,
+                "lr": train_cfg.lr,
+                "epochs": train_cfg.epochs,
+                "layer_deltas": report.layer_deltas,
+                "weight_hist": report.weight_hist,
+                "train_trace": report.train_trace,
+            }
         )
         record = build_selfplay_record(
             run_id=run_id,

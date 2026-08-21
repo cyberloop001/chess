@@ -1048,6 +1048,162 @@ button {
   padding: 0.45rem 0.6rem;
 }
 
+.selfplay-live {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.95fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.selfplay-live-board {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: center;
+  align-content: start;
+}
+
+.selfplay-live-board .board-row {
+  transform: scale(0.92);
+  transform-origin: top center;
+}
+
+.selfplay-live-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  width: 100%;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.selfplay-live-meta span:first-child {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.selfplay-live-moves {
+  --move-cols: 2.6rem minmax(3.2rem, 1fr) 4.2rem 4.6rem 4.6rem 4.8rem;
+  min-height: 36rem;
+  height: min(85vh, 44rem);
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  gap: 0.45rem;
+}
+
+.selfplay-glossary {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  max-height: 9.5rem;
+  overflow: auto;
+}
+
+.selfplay-glossary > div {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr;
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.selfplay-glossary dt {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.selfplay-glossary dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.selfplay-glossary code {
+  font-size: 0.74rem;
+  color: var(--ink);
+}
+
+.selfplay-move-head,
+.selfplay-move-row {
+  display: grid;
+  grid-template-columns: var(--move-cols);
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.28rem 0.4rem;
+}
+
+.selfplay-move-head {
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.35rem;
+}
+
+.selfplay-move-head span:nth-child(n + 3),
+.selfplay-move-row .uci,
+.selfplay-move-row .val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.selfplay-move-list {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 0.2rem;
+  padding-right: 0.25rem;
+  align-content: start;
+}
+
+.selfplay-move-row {
+  border-radius: 8px;
+  font-size: 0.88rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.selfplay-move-row.white {
+  border-left: 2px solid #e8dcc8;
+}
+
+.selfplay-move-row.black {
+  border-left: 2px solid #7ec8ff;
+}
+
+.selfplay-move-row .ply {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.selfplay-move-row .san {
+  font-weight: 600;
+}
+
+.selfplay-move-row .uci,
+.selfplay-move-row .val {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.selfplay-weights {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.selfplay-weight-charts {
+  display: grid;
+  gap: 1rem;
+}
+
 .improve-card {
   display: grid;
   gap: 0.4rem;
@@ -1095,7 +1251,8 @@ button {
 @media (max-width: 1100px) {
   .stat-grid,
   .analytics-grid,
-  .analytics-grid-wide {
+  .analytics-grid-wide,
+  .selfplay-live {
     grid-template-columns: 1fr;
   }
 }
