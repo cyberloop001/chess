@@ -15,6 +15,8 @@ from backend.models.base import AlphaZeroNet
 class MCTSStats:
     simulations: int
     root_value: float
+    net_value: float
+    move_q: float
     top_moves: list[dict]
 
 
@@ -60,7 +62,7 @@ class MCTS:
 
     def search(self, board: chess.Board) -> tuple[chess.Move, np.ndarray, MCTSStats]:
         root = Node(parent=None, prior=1.0)
-        self._expand(root, board)
+        net_value = float(self._expand(root, board))
 
         # Dirichlet noise at root for exploration (training-style; mild at play time)
         if root.children and self.config.dirichlet_epsilon > 0:
@@ -112,13 +114,21 @@ class MCTS:
                     "uci": child.move.uci(),
                     "visits": child.visit_count,
                     "prior": round(child.prior, 4),
-                    "q": round(child.q, 4),
+                    "q": round(child.q, 6),
                 }
             )
 
+        chosen = root.children[action]
+        # Child Q is from the opponent's seat after the move; flip for side-to-move.
+        move_q = float(-chosen.q) if chosen.visit_count > 0 else float(net_value)
+        # Prefer search-backed root Q; fall back to the raw net if search never backed up.
+        root_value = float(root.q) if root.visit_count > 0 else float(net_value)
+
         stats = MCTSStats(
             simulations=self.config.simulations,
-            root_value=round(root.q, 4),
+            root_value=round(root_value, 6),
+            net_value=round(net_value, 6),
+            move_q=round(move_q, 6),
             top_moves=top_moves,
         )
         return move, policy, stats
